@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PropertyInsight AI Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.22.9/babel.min.js"></script>
+    <!-- Firebase SDK Imports (Module versions) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, addDoc, onSnapshot, collection, query, serverTimestamp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Expose Firebase components globally for use in the Babel script scope
+        window.FirebaseComponents = { initializeApp, getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, getFirestore, doc, addDoc, onSnapshot, collection, query, serverTimestamp, setLogLevel };
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        .fade-in { animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .chat-box { scroll-behavior: smooth; }
+        /* Custom scrollbar style for chat box */
+        .chat-box::-webkit-scrollbar { width: 6px; }
+        .chat-box::-webkit-scrollbar-thumb { background-color: #6366f1; border-radius: 3px; }
+        .chat-box::-webkit-scrollbar-track { background: #e5e7eb; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useRef, useEffect, useCallback } = React;
+
+        // --- CONSTANTS ---
+        const MAX_BATCH_PROPERTIES = 5;
+        const API_MODEL = "gemini-2.5-flash-preview-09-2025";
+        const API_KEY = ""; // Canvas environment provides this if empty
+
+        // --- COMPONENTS ---
+
+        const Loader = () => (
+            <div className="flex items-center justify-center space-x-1 p-4">
+                <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse delay-75"></div>
+                <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse delay-150"></div>
+                <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse delay-300"></div>
+            </div>
+        );
+
+        const PropertyInput = ({ index, property, updateProperty, removeProperty, onAnalyze, onGenerateListing, onGenerateFactSheet }) => (
+            <div className="p-4 bg-white shadow rounded-lg border border-gray-200 fade-in flex flex-col gap-2">
+                <div className="flex justify-between items-center">
+                    <h3 className="font-semibold text-indigo-700">Property #{index + 1}</h3>
+                    {index > 0 && (
+                        <button 
+                            onClick={() => removeProperty(index)} 
+                            className="text-red-500 hover:text-red-700 transition"
+                            aria-label={`Remove property ${index + 1}`}
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    )}
+                </div>
+                <input
+                    type="text"
+                    placeholder="Full Address (e.g., 123 Main St, Anytown, CA)"
+                    value={property.address}
+                    onChange={(e) => updateProperty(index, 'address', e.target.value)}
+                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                />
+                <div className="flex gap-2">
+                    <input
+                        type="number"
+                        placeholder="Bedrooms"
+                        value={property.beds}
+                        onChange={(e) => updateProperty(index, 'beds', parseInt(e.target.value) || '')}
+                        className="w-1/2 p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                    />
+                    <input
+                        type="number"
+                        placeholder="Sq. Ft."
+                        value={property.sqft}
+                        onChange={(e) => updateProperty(index, 'sqft', parseInt(e.target.value) || '')}
+                        className="w-1/2 p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                    />
+                </div>
+                {/* NEW AI BUTTONS SECTION */}
+                <div className="grid grid-cols-3 gap-1 mt-2">
+                    <button 
+                        onClick={() => onAnalyze(index)}
+                        disabled={!property.address}
+                        className="py-1.5 px-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-medium rounded border border-indigo-100 transition flex items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Investment Analysis & Recommendation"
+                    >
+                        <span role="img" aria-label="sparkles">✨</span> Analyze
+                    </button>
+                    <button 
+                        onClick={() => onGenerateListing(index)}
+                        disabled={!property.address}
+                        className="py-1.5 px-3 bg-teal-50 hover:bg-teal-100 text-teal-700 text-xs font-medium rounded border border-teal-100 transition flex items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Generate Property Listing Description"
+                    >
+                        <span role="img" aria-label="sparkles">✨</span> Listing
+                    </button>
+                    <button 
+                        onClick={() => onGenerateFactSheet(index)}
+                        disabled={!property.address}
+                        className="py-1.5 px-3 bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-medium rounded border border-purple-100 transition flex items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Generate Neighborhood Fact Sheet with Grounding"
+                    >
+                        <span role="img" aria-label="sparkles">✨</span> Neighborhood
+                    </button>
+                </div>
+            </div>
+        );
+
+        const MessageBubble = ({ message, isUser }) => {
+            const bubbleClass = isUser 
+                ? "bg-indigo-500 text-white self-end rounded-br-none" 
+                : "bg-gray-100 text-gray-800 self-start rounded-tl-none";
+            
+            // Format text to display newlines and basic markdown lists
+            const formattedText = message.text.split('\n').map((line, i) => {
+                if (line.startsWith('* ') || line.startsWith('- ')) {
+                    return <li key={i} className="ml-5 list-disc">{line.substring(2)}</li>
+                }
+                return <p key={i} className="mb-1 last:mb-0">{line}</p>
+            });
+
+            return (
+                <div className={`max-w-3/4 p-3 my-2 rounded-xl shadow-md ${bubbleClass} fade-in`}>
+                    <div className={isUser ? "" : "prose prose-sm"}>{formattedText}</div>
+                    
+                    {!isUser && message.sources && message.sources.length > 0 && (
+                        <div className="mt-2 pt-2 border-t border-gray-200 text-xs text-gray-500">
+                            <h4 className="font-semibold mb-1">Sources:</h4>
+                            <ul className="list-disc list-inside space-y-0.5">
+                                {message.sources.slice(0, 3).map((source, index) => (
+                                    <li key={index} className="truncate">
+                                        <a 
+                                            href={source.uri} 
+                                            target="_blank" 
+                                            rel="noopener noreferrer" 
+                                            className="text-indigo-600 hover:text-indigo-800 hover:underline"
+                                            title={source.title}
+                                        >
+                                            {source.title}
+                                        </a>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+
+        // --- MAIN APP COMPONENT ---
+
+        const App = () => {
+            // Firebase State
+            const [db, setDb] = useState(null);
+            const [auth, setAuth] = useState(null);
+            const [userId, setUserId] = useState(null);
+            const [isAuthReady, setIsAuthReady] = useState(false);
+
+            // App State
+            const [propertyInputs, setPropertyInputs] = useState([{ address: '', beds: '', sqft: '' }]);
+            const [chatHistory, setChatHistory] = useState([]);
+            const [currentQuery, setCurrentQuery] = useState('');
+            const [isLoading, setIsLoading] = useState(false);
+            const [useLocalFallback, setUseLocalFallback] = useState(false);
+            const chatBoxRef = useRef(null);
+
+            // --- FIREBASE INITIALIZATION & AUTHENTICATION ---
+            useEffect(() => {
+                if (!window.FirebaseComponents) {
+                    console.error("Firebase components failed to load.");
+                    return;
+                }
+                
+                const { initializeApp, getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged, getFirestore, setLogLevel } = window.FirebaseComponents;
+
+                try {
+                    // Initialize Firebase
+                    const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+                    if (!firebaseConfig) throw new Error("Firebase config is missing.");
+
+                    const app = initializeApp(firebaseConfig);
+                    const newAuth = getAuth(app);
+                    const newDb = getFirestore(app);
+
+                    setAuth(newAuth);
+                    setDb(newDb);
+                    // setLogLevel('debug'); // Uncomment for verbose Firestore logging
+
+                    // 1. Handle Authentication
+                    const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+                    const handleAuth = async () => {
+                        if (initialAuthToken) {
+                            await signInWithCustomToken(newAuth, initialAuthToken);
+                        } else {
+                            await signInAnonymously(newAuth);
+                        }
+                    };
+
+                    // 2. Listen for Auth State Change
+                    const unsubscribe = onAuthStateChanged(newAuth, (user) => {
+                        if (user) {
+                            setUserId(user.uid);
+                        } else {
+                            // If user signs out, use a random ID for session persistence
+                            setUserId(crypto.randomUUID());
+                        }
+                        setIsAuthReady(true);
+                    });
+
+                    // Initial sign-in attempt
+                    handleAuth();
+                    
+                    return () => unsubscribe(); // Cleanup auth listener
+                } catch (error) {
+                    console.error("Firebase Initialization Error:", error);
+                    setUseLocalFallback(true);
+                }
+            }, []);
+
+            // --- FIRESTORE CHAT HISTORY SUBSCRIPTION ---
+            useEffect(() => {
+                // If local fallback is enabled or auth/db not ready, do not attempt Firestore subscription
+                if (!db || !isAuthReady || !userId || useLocalFallback) return;
+
+                const { collection, onSnapshot } = window.FirebaseComponents;
+                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                
+                try {
+                    const collRef = collection(db, 'artifacts', appId, 'users', userId, 'property_chat');
+
+                    const unsubscribe = onSnapshot(collRef, (snapshot) => {
+                        const messages = [];
+                        snapshot.forEach((doc) => {
+                            messages.push({ id: doc.id, ...doc.data() });
+                        });
+                        
+                        messages.sort((a, b) => {
+                            const timeA = a.timestamp?.seconds || a.timestamp || 0;
+                            const timeB = b.timestamp?.seconds || b.timestamp || 0;
+                            return timeA - timeB;
+                        });
+                        
+                        setChatHistory(messages);
+                    }, (error) => {
+                        // Catch missing permissions gracefully and switch to local session state
+                        if (error.code === 'permission-denied' || error.message?.includes('permissions')) {
+                            console.warn("Firestore access restricted by security rules. Switching seamlessly to local session mode.");
+                            setUseLocalFallback(true);
+                        } else {
+                            console.error("Error fetching chat history:", error);
+                        }
+                    });
+
+                    return () => unsubscribe();
+                } catch (err) {
+                    console.warn("Firestore snapshot initialization error, falling back to local mode:", err);
+                    setUseLocalFallback(true);
+                }
+            }, [db, isAuthReady, userId, useLocalFallback]);
+
+            // --- SCROLL TO BOTTOM OF CHAT ---
+            useEffect(() => {
+                if (chatBoxRef.current) {
+                    chatBoxRef.current.scrollTop = chatBoxRef.current.scrollHeight;
+                }
+            }, [chatHistory, isLoading]);
+
+
+            // --- DATA MANIPULATION HANDLERS ---
+            const updateProperty = (index, field, value) => {
+                const newProperties = [...propertyInputs];
+                newProperties[index][field] = value;
+                setPropertyInputs(newProperties);
+            };
+
+            const addProperty = () => {
+                if (propertyInputs.length < MAX_BATCH_PROPERTIES) {
+                    setPropertyInputs([...propertyInputs, { address: '', beds: '', sqft: '' }]);
+                }
+            };
+
+            const removeProperty = (index) => {
+                if (propertyInputs.length > 1) {
+                    const newProperties = propertyInputs.filter((_, i) => i !== index);
+                    setPropertyInputs(newProperties);
+                }
+            };
+
+            // --- GEMINI API HELPER ---
+            const makeApiCallWithBackoff = useCallback(async (payload, retries = 3) => {
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${API_MODEL}:generateContent?key=${API_KEY}`;
+                
+                for (let attempt = 0; attempt < retries; attempt++) {
+                    try {
+                        const response = await fetch(apiUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+
+                        if (!response.ok) {
+                             if (response.status === 429 && attempt < retries - 1) {
+                                // Rate limit exceeded, retry with exponential backoff
+                                const delay = Math.pow(2, attempt) * 1000 + Math.random() * 1000;
+                                await new Promise(resolve => setTimeout(resolve, delay));
+                                continue;
+                            }
+                            throw new Error(`API call failed with status: ${response.status}`);
+                        }
+
+                        const result = await response.json();
+                        const candidate = result.candidates?.[0];
+
+                        if (candidate && candidate.content?.parts?.[0]?.text) {
+                            const text = candidate.content.parts[0].text;
+                            let sources = [];
+                            const groundingMetadata = candidate.groundingMetadata;
+                            if (groundingMetadata && groundingMetadata.groundingAttributions) {
+                                sources = groundingMetadata.groundingAttributions
+                                    .map(attribution => ({
+                                        uri: attribution.web?.uri,
+                                        title: attribution.web?.title,
+                                    }))
+                                    .filter(source => source.uri && source.title); 
+                            }
+                            return { text, sources };
+
+                        } else {
+                             // This handles cases where the model returns an empty candidate or safety block
+                            const blockReason = result.promptFeedback?.blockReason || 'Unknown model refusal.';
+                            return { text: `[System]: The request was blocked. Reason: ${blockReason}`, sources: [] };
+                        }
+
+                    } catch (error) {
+                        console.error(`Attempt ${attempt + 1} failed:`, error);
+                        if (attempt < retries - 1) {
+                            const delay = Math.pow(2, attempt) * 1000 + Math.random() * 1000;
+                            await new Promise(resolve => setTimeout(resolve, delay));
+                        } else {
+                            throw new Error("Failed to get response from Gemini API after multiple retries.");
+                        }
+                    }
+                }
+            }, []);
+
+            // --- CHAT LOGIC ---
+            const handleSendMessage = async (e, overrideText = null) => {
+                if (e) e.preventDefault();
+                const textToSend = overrideText || currentQuery;
+                if (!textToSend.trim()) return;
+
+                setIsLoading(true);
+
+                // 1. Create context string for properties
+                const activeProperties = propertyInputs.filter(p => p.address.trim());
+                const propertyContext = activeProperties.length > 0
+                    ? "\n\n**PROPERTIES FOR CONTEXT:**\n" + activeProperties
+                        .map((p, i) => 
+                            `#${i + 1}: Address: ${p.address}, Beds: ${p.beds || 'N/A'}, SqFt: ${p.sqft || 'N/A'}`
+                        )
+                        .join('\n')
+                    : "";
+
+                const fullUserQuery = textToSend + propertyContext;
+                
+                const userMessage = { 
+                    id: crypto.randomUUID(),
+                    text: textToSend, 
+                    role: 'user', 
+                    timestamp: Date.now(),
+                };
+
+                let savedToFirestore = false;
+
+                if (db && userId && !useLocalFallback) {
+                    try {
+                        const { addDoc, collection, serverTimestamp } = window.FirebaseComponents;
+                        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                        await addDoc(collection(db, 'artifacts', appId, 'users', userId, 'property_chat'), {
+                            ...userMessage,
+                            timestamp: serverTimestamp()
+                        });
+                        savedToFirestore = true;
+                    } catch (error) {
+                        console.warn("Firestore write restricted. Falling back to local state.", error);
+                        setUseLocalFallback(true);
+                    }
+                }
+
+                if (!savedToFirestore) {
+                    setChatHistory(prev => [...prev, userMessage]);
+                }
+
+                if (!overrideText) setCurrentQuery('');
+
+                // 3. Call Gemini API
+                const systemPrompt = "You are PropertyInsight AI, a world-class real estate analyst. You are provided with user questions and a list of properties for context. Use the provided property data and your grounded knowledge (Google Search) to give accurate, detailed, and actionable insights. Use bullet points for complex analysis and markdown tables for comparative reports. Start your response with a professional greeting.";
+                
+                const payload = {
+                    contents: [{ parts: [{ text: fullUserQuery }] }],
+                    tools: [{ "google_search": {} }],
+                    systemInstruction: { parts: [{ text: systemPrompt }] },
+                };
+
+                try {
+                    const apiResponse = await makeApiCallWithBackoff(payload);
+                    
+                    const aiMessage = { 
+                        id: crypto.randomUUID(),
+                        text: apiResponse.text, 
+                        role: 'model', 
+                        sources: apiResponse.sources,
+                        timestamp: Date.now(),
+                    };
+
+                    let aiSavedToFirestore = false;
+                    if (db && userId && !useLocalFallback) {
+                        try {
+                            const { addDoc, collection, serverTimestamp } = window.FirebaseComponents;
+                            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                            await addDoc(collection(db, 'artifacts', appId, 'users', userId, 'property_chat'), {
+                                ...aiMessage,
+                                timestamp: serverTimestamp()
+                            });
+                            aiSavedToFirestore = true;
+                        } catch (error) {
+                            console.warn("Firestore write restricted for AI message. Saving to local state.", error);
+                            setUseLocalFallback(true);
+                        }
+                    }
+
+                    if (!aiSavedToFirestore) {
+                        setChatHistory(prev => [...prev, aiMessage]);
+                    }
+
+                } catch (error) {
+                    console.error("Gemini API Error:", error);
+                    const errorMessage = { 
+                        id: crypto.randomUUID(),
+                        text: "Sorry, I ran into an error while processing your request.", 
+                        role: 'model', 
+                        sources: [],
+                        timestamp: Date.now(),
+                    };
+                    setChatHistory(prev => [...prev, errorMessage]);
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+
+            // --- AI ACTIONS (New and Existing) ---
+            
+            // 1. Existing: Detailed Investment Analysis
+            const handleAnalyzeProperty = (index) => {
+                const p = propertyInputs[index];
+                if (!p.address) return;
+                const prompt = `Analyze the investment potential for the property at ${p.address} with ${p.beds} bedrooms and ${p.sqft} sqft. Include estimated rental income, neighborhood trends, and a "Buy" or "Pass" recommendation with reasoning based on current market conditions.`;
+                handleSendMessage(null, prompt);
+            };
+
+            // 2. NEW: Generate Listing Description
+            const handleGenerateListingDescription = (index) => {
+                const p = propertyInputs[index];
+                if (!p.address) return;
+                const prompt = `Write a compelling, positive, and SEO-friendly property listing description (max 200 words) for the property at ${p.address} with ${p.beds} bedrooms and ${p.sqft} sqft. Highlight key selling points, the neighborhood's desirability, and an engaging call-to-action.`;
+                handleSendMessage(null, prompt);
+            };
+
+            // 3. NEW: Generate Neighborhood Fact Sheet (Uses Google Search heavily)
+            const handleGenerateFactSheet = (index) => {
+                const p = propertyInputs[index];
+                if (!p.address) return;
+                const prompt = `Generate a concise neighborhood fact sheet for the area around the property at ${p.address}. Include key points on local schools (ratings if available), top 3 nearby amenities (parks, shops, transit), and current demographic highlights that appeal to investors. Use grounded search heavily.`;
+                handleSendMessage(null, prompt);
+            };
+
+            // 4. Existing: Comparative Market Report
+            const generateMarketReport = () => {
+                const activeProperties = propertyInputs.filter(p => p.address.trim());
+                if (activeProperties.length === 0) return;
+                const prompt = `Generate a comprehensive comparative market analysis (CMA) report for the following properties. Compare their locations, estimated values, and investment viability in a markdown table format, followed by a summary of the best opportunity.\n\nProperties:\n${activeProperties.map(p => `- ${p.address} (${p.beds} beds, ${p.sqft} sqft)`).join('\n')}`;
+                handleSendMessage(null, prompt);
+            };
+
+            // 5. Existing: Investor Email Draft
+            const generateInvestorEmail = () => {
+                const activeProperties = propertyInputs.filter(p => p.address.trim());
+                if (activeProperties.length === 0) return;
+                const prompt = `Draft a persuasive email to a potential real estate investor. Pitch the following properties as high-potential acquisitions. Highlight the location benefits and potential upside.\n\nProperties:\n${activeProperties.map(p => `- ${p.address}`).join('\n')}`;
+                handleSendMessage(null, prompt);
+            };
+
+            // 6. NEW: Financial Scenarios Brainstormer
+            const generateFinancialScenarios = () => {
+                const activeProperties = propertyInputs.filter(p => p.address.trim());
+                if (activeProperties.length === 0) return;
+                const prompt = `Generate three detailed investment and financial scenarios for the following properties: 1) BRRRR method potential (Buy, Rehab, Rent, Refinance), 2) Short-term rental (AirBnB) cash flow estimate, and 3) Long-term buy-and-hold conservative projection. Assume a 20% down payment and current market interest rates. Use bullet points for each scenario.\n\nProperties:\n${activeProperties.map(p => `- ${p.address} (${p.beds} beds, ${p.sqft} sqft)`).join('\n')}`;
+                handleSendMessage(null, prompt);
+            };
+            
+            // --- RENDER UI ---
+
+            if (!isAuthReady) {
+                return <div className="min-h-screen flex items-center justify-center bg-gray-50"><Loader /></div>;
+            }
+
+            return (
+                <div className="flex h-screen overflow-hidden">
+                    {/* Left Panel: Property Input */}
+                    <div className="w-full lg:w-1/3 p-4 md:p-6 bg-white overflow-y-auto border-r border-gray-200">
+                        <div className="flex justify-between items-center mb-6">
+                            <h1 className="text-2xl font-bold text-indigo-800">Property Insights</h1>
+                            <span className="text-xs text-gray-500 italic">User ID: {userId || 'N/A'}</span>
+                        </div>
+                        
+                        <h2 className="text-lg font-semibold text-gray-700 mb-3 border-b pb-2">Properties for Analysis ({propertyInputs.length}/{MAX_BATCH_PROPERTIES})</h2>
+
+                        <div className="space-y-4 mb-6">
+                            {propertyInputs.map((property, index) => (
+                                <PropertyInput
+                                    key={index}
+                                    index={index}
+                                    property={property}
+                                    updateProperty={updateProperty}
+                                    removeProperty={removeProperty}
+                                    onAnalyze={handleAnalyzeProperty}
+                                    onGenerateListing={handleGenerateListingDescription}
+                                    onGenerateFactSheet={handleGenerateFactSheet}
+                                />
+                            ))}
+                        </div>
+                        
+                        {propertyInputs.length < MAX_BATCH_PROPERTIES && (
+                            <button
+                                onClick={addProperty}
+                                className="w-full py-2 px-4 bg-indigo-50 border border-indigo-200 text-indigo-700 rounded-lg hover:bg-indigo-100 transition duration-150 text-sm font-medium shadow-sm"
+                            >
+                                + Add Another Property
+                            </button>
+                        )}
+
+                        {/* AI Batch Tools Section */}
+                        <div className="mt-6 border-t border-gray-200 pt-4">
+                            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">AI Batch Tools</h3>
+                            <div className="grid grid-cols-3 gap-2">
+                                <button 
+                                    onClick={generateMarketReport}
+                                    disabled={propertyInputs.filter(p => p.address).length === 0}
+                                    className="p-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-xs font-medium shadow-sm flex flex-col items-center gap-1 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <span className="text-lg">📊</span>
+                                    Market Report
+                                </button>
+                                <button 
+                                    onClick={generateInvestorEmail}
+                                    disabled={propertyInputs.filter(p => p.address).length === 0}
+                                    className="p-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-xs font-medium shadow-sm flex flex-col items-center gap-1 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <span className="text-lg">✉️</span>
+                                    Investor Email
+                                </button>
+                                <button 
+                                    onClick={generateFinancialScenarios}
+                                    disabled={propertyInputs.filter(p => p.address).length === 0}
+                                    className="p-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-xs font-medium shadow-sm flex flex-col items-center gap-1 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                    title="Generate 3 Investment Strategy Scenarios"
+                                >
+                                    <span className="text-lg">💰</span>
+                                    Financial Scenarios
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
+                            <p className="font-semibold mb-1">Tip:</p>
+                            <p>Enter the full address and details above. Then, use the <b>Analyze</b> buttons or ask custom questions in the chat, such as "What is the expected rental yield for property #1?"</p>
+                        </div>
+                    </div>
+
+                    {/* Right Panel: AI Chat Interface */}
+                    <div className="flex flex-col flex-1 w-full lg:w-2/3 bg-gray-50">
+                        <header className="p-4 md:p-6 border-b border-gray-200 bg-white shadow-sm flex items-center justify-between">
+                            <div className="flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-indigo-600 mr-3" viewBox="0 0 20 20" fill="currentColor">
+                                    <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707l-.707-.707V8a6 6 0 00-6-6zM10 18a3 3 0 110-6 3 3 0 010 6z" />
+                                </svg>
+                                <h2 className="text-xl font-semibold text-gray-800">AI Analysis Chat</h2>
+                            </div>
+                            {useLocalFallback && (
+                                <span className="text-xs bg-amber-50 text-amber-700 px-2.5 py-1 rounded-full border border-amber-200 font-medium">
+                                    Session Mode (Local)
+                                </span>
+                            )}
+                        </header>
+
+                        {/* Chat History Display */}
+                        <div ref={chatBoxRef} className="flex-1 p-4 md:p-6 overflow-y-auto chat-box flex flex-col space-y-3">
+                            {chatHistory.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center h-full text-center text-gray-500">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 mb-2 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                    </svg>
+                                    <p className="text-lg font-medium">Start your property analysis.</p>
+                                    <p className="text-sm">Ask me about market trends, valuation, or rental yields!</p>
+                                </div>
+                            ) : (
+                                chatHistory.map((message) => (
+                                    <MessageBubble key={message.id} message={message} isUser={message.role === 'user'} />
+                                ))
+                            )}
+                            {isLoading && <Loader />}
+                        </div>
+
+                        {/* Chat Input Form */}
+                        <footer className="p-4 md:p-6 border-t border-gray-200 bg-white">
+                            <form onSubmit={handleSendMessage} className="flex space-x-3">
+                                <input
+                                    type="text"
+                                    value={currentQuery}
+                                    onChange={(e) => setCurrentQuery(e.target.value)}
+                                    placeholder="Ask the AI about your properties or the market..."
+                                    className="flex-1 p-3 border border-gray-300 rounded-xl focus:ring-indigo-500 focus:border-indigo-500 shadow-sm"
+                                    disabled={isLoading}
+                                />
+                                <button
+                                    type="submit"
+                                    disabled={isLoading || !currentQuery.trim()}
+                                    className="bg-indigo-600 text-white p-3 rounded-xl shadow-md hover:bg-indigo-700 transition duration-150 disabled:bg-indigo-300 disabled:cursor-not-allowed flex items-center justify-center"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                        <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 00.243 1.144 1 1 0 00.914.072L10 15.61l6.532 2.169a1 1 0 00.914-.072 1 1 0 00.243-1.144l-7-14z" />
+                                    </svg>
+                                </button>
+                            </form>
+                        </footer>
+                    </div>
+                </div>
+            );
+        };
+
+        // Render the application (Wrap render in setTimeout to ensure DOM/React readiness)
+        setTimeout(() => {
+            if (typeof ReactDOM !== 'undefined' && document.getElementById('root')) {
+                ReactDOM.render(<App />, document.getElementById('root'));
+            } else {
+                console.error("ReactDOM or root element not available for rendering.");
+            }
+        }, 0);
+    </script>
+</body>
+</html>
