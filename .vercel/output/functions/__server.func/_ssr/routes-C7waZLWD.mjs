@@ -6,21 +6,1719 @@ import { t as cva } from "../_libs/class-variance-authority+clsx.mjs";
 import { c as pct, i as formatMiles, n as cn, o as id, r as compactUsd, u as usd } from "./utils-BOIfZi7B.mjs";
 import { a as SAMPLES, n as FEATURES$1, r as FEATURE_STYLES, t as AMENITY_COLORS } from "./knowledge-_ynDysTG.mjs";
 import { i as watchFromDossier, n as overlayComps, r as scoreHarvest, t as buildDossier } from "./engine-CoB_AfSa.mjs";
-import { a as number, n as any, o as object, r as array, s as string, t as _enum } from "../_libs/zod.mjs";
-import { a as LoaderCircle, c as Check, i as LocateFixed, n as Search, o as Compass, r as MapPin, s as ChevronDown } from "../_libs/lucide-react.mjs";
+import { a as number, c as tuple, n as any, o as object, r as array, s as string, t as _enum } from "../_libs/zod.mjs";
+import { n as nearestNexrad, t as NEXRAD_SITES } from "./nexrad-sites-DRRFcsfk.mjs";
+import { a as MapPin, c as Earth, d as ChevronDown, f as Check, i as Radar, l as Crosshair, m as Binoculars, n as Search, o as LocateFixed, p as Briefcase, r as ScanLine, s as LoaderCircle, u as Compass } from "../_libs/lucide-react.mjs";
 import { n as toast } from "../_libs/sonner.mjs";
-import { t as Root } from "../_libs/radix-ui__react-label.mjs";
-import { a as SelectItemIndicator, c as SelectTrigger$1, i as SelectItem$1, l as SelectValue$1, n as SelectContent$1, o as SelectItemText, r as SelectIcon, s as SelectPortal, t as Select$1, u as SelectViewport } from "../_libs/@radix-ui/react-select+[...].mjs";
 import { n as persist, r as create, t as createJSONStorage } from "../_libs/zustand.mjs";
+import { a as SelectItemIndicator, c as SelectTrigger$1, i as SelectItem$1, l as SelectValue$1, n as SelectContent$1, o as SelectItemText, r as SelectIcon, s as SelectPortal, t as Select$1, u as SelectViewport } from "../_libs/@radix-ui/react-select+[...].mjs";
 import { i as SliderTrack, n as SliderRange, r as SliderThumb, t as Slider$1 } from "../_libs/radix-ui__react-slider.mjs";
-import { a as XAxis, c as Bar, d as PolarRadiusAxis, f as PolarGrid, i as YAxis, l as Radar, m as Tooltip, n as BarChart, o as Line, p as ResponsiveContainer, r as LineChart, s as CartesianGrid, t as RadarChart, u as PolarAngleAxis } from "../_libs/recharts+[...].mjs";
+import { n as isSameDay, t as format } from "../_libs/date-fns.mjs";
+import { t as Root } from "../_libs/radix-ui__react-label.mjs";
+import { a as XAxis, c as Bar, d as PolarRadiusAxis, f as PolarGrid, i as YAxis, l as Radar$1, m as Tooltip, n as BarChart, o as Line, p as ResponsiveContainer, r as LineChart, s as CartesianGrid, t as RadarChart, u as PolarAngleAxis } from "../_libs/recharts+[...].mjs";
 import { n as Root$1, t as Indicator } from "../_libs/radix-ui__react-progress.mjs";
 import { t as Root$2 } from "../_libs/radix-ui__react-separator.mjs";
 import { i as Viewport, n as Scrollbar, r as Thumb, t as Root$3 } from "../_libs/radix-ui__react-scroll-area.mjs";
 import { n as Root2, r as Trigger, t as List } from "../_libs/radix-ui__react-tabs.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-BG3LRmM9.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-C7waZLWD.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
+var buttonVariants = cva("inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 disabled:pointer-events-none disabled:opacity-40 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0", {
+	variants: {
+		variant: {
+			default: "bg-primary text-primary-foreground hover:bg-primary/90",
+			secondary: "bg-secondary text-secondary-foreground hover:bg-accent",
+			outline: "border border-border bg-transparent hover:bg-accent",
+			ghost: "hover:bg-accent hover:text-accent-foreground",
+			destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+			link: "text-primary underline-offset-4 hover:underline"
+		},
+		size: {
+			default: "h-11 px-4",
+			sm: "h-9 rounded-md px-3 text-xs",
+			lg: "h-12 rounded-lg px-5",
+			icon: "size-11"
+		}
+	},
+	defaultVariants: {
+		variant: "default",
+		size: "default"
+	}
+});
+var Button = import_react.forwardRef(({ className, variant, size, asChild = false, ...props }, ref) => {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(asChild ? Slot : "button", {
+		className: cn(buttonVariants({
+			variant,
+			size,
+			className
+		})),
+		ref,
+		...props
+	});
+});
+Button.displayName = "Button";
+var SAMPLE_PINS = SAMPLES.map((s) => ({
+	label: s.label,
+	blurb: s.blurb,
+	pin: {
+		id: `sample_${s.lat}`,
+		label: `${s.address}, ${s.city}, ${s.state}`,
+		address: s.address,
+		city: s.city,
+		state: s.state,
+		postcode: s.postcode,
+		lat: s.lat,
+		lng: s.lng,
+		neighborhood: s.neighborhood,
+		source: "sample"
+	}
+}));
+var memoryStorage$1 = {
+	getItem: () => null,
+	setItem: () => {},
+	removeItem: () => {}
+};
+var usePropertyStore = create()(persist((set, get) => ({
+	selected: null,
+	geofenceMode: false,
+	geofenceRadiusM: 800,
+	zoneHits: [],
+	harvest: [],
+	dossier: null,
+	dossierStatus: "idle",
+	dossierError: null,
+	neighborhood: null,
+	neighborhoodStatus: "idle",
+	amenities: [],
+	panelTab: "dossier",
+	render: null,
+	campaign: [],
+	campaignStatus: "idle",
+	history: [],
+	watchlist: [],
+	mapCenter: {
+		lat: 32.7555,
+		lng: -97.3308,
+		zoom: 11
+	},
+	mapLayer: "streets",
+	scenarioId: "curb",
+	chat: [],
+	chatStatus: "idle",
+	scanning: false,
+	tractRing: null,
+	buildingRing: null,
+	geofenceShape: "circle",
+	geofenceVertices: [],
+	drawingPolygon: false,
+	selectPin: (pin) => {
+		set({
+			selected: pin,
+			history: [pin, ...get().history.filter((h) => h.id !== pin.id)].slice(0, 12),
+			mapCenter: {
+				lat: pin.lat,
+				lng: pin.lng,
+				zoom: 16
+			},
+			dossier: null,
+			dossierStatus: "idle",
+			dossierError: null,
+			neighborhood: null,
+			neighborhoodStatus: "idle",
+			amenities: [],
+			campaign: [],
+			chat: [],
+			panelTab: "dossier",
+			scenarioId: "curb",
+			tractRing: null,
+			buildingRing: null
+		});
+	},
+	clearSelection: () => set({
+		selected: null,
+		dossier: null,
+		dossierStatus: "idle",
+		neighborhood: null,
+		zoneHits: [],
+		harvest: [],
+		render: null,
+		chat: [],
+		tractRing: null,
+		buildingRing: null
+	}),
+	setGeofenceMode: (on) => set({
+		geofenceMode: on,
+		drawingPolygon: on && get().geofenceShape === "polygon"
+	}),
+	setGeofenceRadius: (m) => set({ geofenceRadiusM: m }),
+	setZoneHits: (hits) => set({ zoneHits: hits }),
+	setHarvest: (h) => set({ harvest: h }),
+	setDossier: (d, status = d ? "ready" : "idle", error = null) => set({
+		dossier: d,
+		dossierStatus: status,
+		dossierError: error
+	}),
+	setNeighborhood: (n, status = n ? "ready" : "idle") => set({
+		neighborhood: n,
+		neighborhoodStatus: status
+	}),
+	setAmenities: (a) => set({ amenities: a }),
+	setPanelTab: (t) => set({ panelTab: t }),
+	setRender: (r) => set({ render: r }),
+	patchRender: (p) => {
+		const cur = get().render;
+		if (!cur) return;
+		set({ render: {
+			...cur,
+			...p
+		} });
+	},
+	setCampaign: (c, status = "ready") => set({
+		campaign: c,
+		campaignStatus: status
+	}),
+	setMapCenter: (c) => set({ mapCenter: c }),
+	setMapLayer: (l) => set({ mapLayer: l }),
+	setScenarioId: (id) => set({ scenarioId: id }),
+	pushChat: (t) => set({ chat: [...get().chat, t] }),
+	setChat: (c) => set({ chat: c }),
+	setChatStatus: (s) => set({ chatStatus: s }),
+	setScanning: (on) => set({ scanning: on }),
+	toggleWatch: (item) => {
+		set({ watchlist: get().watchlist.some((w) => w.pin.id === item.pin.id) ? get().watchlist.filter((w) => w.pin.id !== item.pin.id) : [item, ...get().watchlist].slice(0, 6) });
+	},
+	setTractRing: (r) => set({ tractRing: r }),
+	setBuildingRing: (r) => set({ buildingRing: r }),
+	setGeofenceShape: (s) => set({
+		geofenceShape: s,
+		drawingPolygon: get().geofenceMode && s === "polygon"
+	}),
+	addGeofenceVertex: (v) => set({ geofenceVertices: [...get().geofenceVertices, v].slice(0, 24) }),
+	undoGeofenceVertex: () => set({ geofenceVertices: get().geofenceVertices.slice(0, -1) }),
+	clearGeofenceVertices: () => set({ geofenceVertices: [] }),
+	setDrawingPolygon: (on) => set({ drawingPolygon: on })
+}), {
+	name: "propertyinsight-v3",
+	storage: createJSONStorage(() => typeof window === "undefined" ? memoryStorage$1 : localStorage),
+	partialize: (s) => ({
+		history: s.history,
+		watchlist: s.watchlist,
+		geofenceRadiusM: s.geofenceRadiusM,
+		mapCenter: s.mapCenter,
+		mapLayer: s.mapLayer
+	})
+}));
+var createSsrRpc = (functionId) => {
+	const url = "/_serverFn/" + functionId;
+	const serverFnMeta = { id: functionId };
+	const fn = async (...args) => {
+		return (await getServerFnById(functionId, { origin: "server" }))(...args);
+	};
+	return Object.assign(fn, {
+		url,
+		serverFnMeta,
+		[TSS_SERVER_FUNCTION]: true
+	});
+};
+var fetchQuakes = createServerFn({ method: "POST" }).handler(createSsrRpc("bc4e674d2387fe30846b5861036476b6f419d7eb6f97c7b6fd060076aa1515e7"));
+var fetchFlights = createServerFn({ method: "POST" }).validator((input) => ({
+	lamin: number().parse(input.lamin),
+	lomin: number().parse(input.lomin),
+	lamax: number().parse(input.lamax),
+	lomax: number().parse(input.lomax)
+})).handler(createSsrRpc("4548ea896b5b5c4430c1ac320f4d66da6f27e1de32b073712b88a15268b0f7d9"));
+var useWeatherStore = create((set, get) => ({
+	host: "https://tilecache.rainviewer.com",
+	frames: [],
+	infrared: [],
+	frameIndex: 0,
+	playing: true,
+	product: "radar",
+	opacity: .62,
+	overlayOn: false,
+	alertsOn: true,
+	alerts: [],
+	alertsSource: null,
+	catalogStatus: "idle",
+	alertsStatus: "idle",
+	selectedAlertId: null,
+	setCatalog: (host, frames, infrared) => set({
+		host,
+		frames,
+		infrared,
+		frameIndex: Math.max(0, frames.length - 1),
+		catalogStatus: "ready"
+	}),
+	setFrameIndex: (i) => set({ frameIndex: i }),
+	setPlaying: (on) => set({ playing: on }),
+	setProduct: (p) => set({ product: p }),
+	setOpacity: (n) => set({ opacity: n }),
+	setOverlayOn: (on) => set({ overlayOn: on }),
+	setAlertsOn: (on) => set({ alertsOn: on }),
+	setAlerts: (a, source) => set({
+		alerts: a,
+		alertsSource: source ?? get().alertsSource,
+		alertsStatus: "ready"
+	}),
+	setCatalogStatus: (s) => set({ catalogStatus: s }),
+	setAlertsStatus: (s) => set({ alertsStatus: s }),
+	selectAlert: (id) => set({ selectedAlertId: id }),
+	step: (delta) => {
+		const { frames, frameIndex } = get();
+		if (!frames.length) return;
+		set({ frameIndex: (frameIndex + delta + frames.length) % frames.length });
+	}
+}));
+function currentRadarUrl() {
+	const s = useWeatherStore.getState();
+	if (s.product === "infrared") {
+		const f = s.infrared[Math.min(s.frameIndex, Math.max(0, s.infrared.length - 1))];
+		if (!f) return null;
+		return `${s.host}${f.path}/256/{z}/{x}/{y}/0/0_0.png`;
+	}
+	const f = s.frames[s.frameIndex];
+	if (!f) return null;
+	return `${s.host}${f.path}/256/{z}/{x}/{y}/2/1_1.png`;
+}
+var CESIUM_BASE = "https://cdn.jsdelivr.net/npm/cesium@1.124.0/Build/Cesium/";
+function loadCesium() {
+	const w = window;
+	if (w.Cesium) return Promise.resolve(w.Cesium);
+	w.CESIUM_BASE_URL = CESIUM_BASE;
+	if (!document.querySelector("link[data-cesium]")) {
+		const link = document.createElement("link");
+		link.rel = "stylesheet";
+		link.href = `${CESIUM_BASE}Widgets/widgets.css`;
+		link.dataset.cesium = "1";
+		document.head.appendChild(link);
+	}
+	return new Promise((resolve, reject) => {
+		const existing = document.querySelector("script[data-cesium]");
+		const finish = () => w.Cesium ? resolve(w.Cesium) : reject(/* @__PURE__ */ new Error("Cesium missing"));
+		if (existing) {
+			existing.addEventListener("load", finish);
+			if (w.Cesium) finish();
+			return;
+		}
+		const script = document.createElement("script");
+		script.src = `${CESIUM_BASE}Cesium.js`;
+		script.async = true;
+		script.dataset.cesium = "1";
+		script.onload = finish;
+		script.onerror = () => reject(/* @__PURE__ */ new Error("Cesium CDN blocked"));
+		document.body.appendChild(script);
+	});
+}
+function GlobeWorkspace() {
+	const host = (0, import_react.useRef)(null);
+	const viewerRef = (0, import_react.useRef)(null);
+	const pin = usePropertyStore((s) => s.selected);
+	const center = usePropertyStore((s) => s.mapCenter);
+	const overlayOn = useWeatherStore((s) => s.overlayOn);
+	const frameIndex = useWeatherStore((s) => s.frameIndex);
+	const [status, setStatus] = (0, import_react.useState)("loading");
+	const [note, setNote] = (0, import_react.useState)("Loading orbital view");
+	const [quakes, setQuakes] = (0, import_react.useState)([]);
+	const [flights, setFlights] = (0, import_react.useState)([]);
+	const [showFlights, setShowFlights] = (0, import_react.useState)(true);
+	const [showQuakes, setShowQuakes] = (0, import_react.useState)(true);
+	const [showRadar, setShowRadar] = (0, import_react.useState)(false);
+	(0, import_react.useEffect)(() => {
+		const lat = pin?.lat ?? center.lat;
+		const lng = pin?.lng ?? center.lng;
+		const span = 4;
+		let cancelled = false;
+		fetchQuakes().then((r) => {
+			if (!cancelled && r.ok) setQuakes(r.quakes);
+		});
+		fetchFlights({ data: {
+			lamin: lat - span,
+			lamax: lat + span,
+			lomin: lng - span,
+			lomax: lng + span
+		} }).then((r) => {
+			if (!cancelled && r.ok) setFlights(r.flights.slice(0, 80));
+		});
+		return () => {
+			cancelled = true;
+		};
+	}, [
+		pin?.lat,
+		pin?.lng,
+		center.lat,
+		center.lng
+	]);
+	(0, import_react.useEffect)(() => {
+		let dead = false;
+		if (!host.current) return;
+		(async () => {
+			try {
+				const Cesium = await loadCesium();
+				if (dead || !host.current) return;
+				Cesium.Ion.defaultAccessToken = "";
+				const imagery = new Cesium.UrlTemplateImageryProvider({
+					url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+					credit: "Esri"
+				});
+				const viewer = new Cesium.Viewer(host.current, {
+					animation: false,
+					timeline: false,
+					baseLayerPicker: false,
+					geocoder: false,
+					homeButton: false,
+					sceneModePicker: false,
+					navigationHelpButton: false,
+					fullscreenButton: false,
+					infoBox: false,
+					selectionIndicator: false,
+					baseLayer: Cesium.ImageryLayer.fromProviderAsync(Promise.resolve(imagery)),
+					terrain: new Cesium.Terrain(Promise.resolve(new Cesium.EllipsoidTerrainProvider()))
+				});
+				viewer.scene.globe.enableLighting = false;
+				viewerRef.current = viewer;
+				const lat = pin?.lat ?? center.lat;
+				const lng = pin?.lng ?? center.lng;
+				viewer.camera.flyTo({
+					destination: Cesium.Cartesian3.fromDegrees(lng, lat, 18e5),
+					duration: 0
+				});
+				setStatus("ready");
+				setNote("Ellipsoid globe · Esri imagery · no Ion token");
+				window.setTimeout(() => viewer.resize(), 200);
+			} catch (e) {
+				if (!dead) {
+					setStatus("error");
+					setNote(e instanceof Error ? e.message : "Globe failed");
+				}
+			}
+		})();
+		return () => {
+			dead = true;
+			viewerRef.current?.destroy();
+			viewerRef.current = null;
+		};
+	}, []);
+	(0, import_react.useEffect)(() => {
+		const viewer = viewerRef.current;
+		if (!viewer || status !== "ready") return;
+		let cancelled = false;
+		(async () => {
+			const Cesium = await loadCesium();
+			if (cancelled || !viewerRef.current) return;
+			viewer.entities.removeAll();
+			const lat = pin?.lat ?? center.lat;
+			const lng = pin?.lng ?? center.lng;
+			viewer.entities.add({
+				name: pin?.address ?? "Map center",
+				position: Cesium.Cartesian3.fromDegrees(lng, lat, 0),
+				point: {
+					pixelSize: 12,
+					color: Cesium.Color.fromCssColorString("#8aa07a")
+				},
+				label: {
+					text: pin?.address ?? "Scout center",
+					font: "13px IBM Plex Sans",
+					fillColor: Cesium.Color.fromCssColorString("#eceae4"),
+					pixelOffset: new Cesium.Cartesian2(0, -16)
+				}
+			});
+			for (const s of NEXRAD_SITES) viewer.entities.add({
+				name: s.id,
+				position: Cesium.Cartesian3.fromDegrees(s.lng, s.lat, 0),
+				point: {
+					pixelSize: 6,
+					color: Cesium.Color.fromCssColorString("#c4b49a")
+				},
+				label: {
+					text: s.id,
+					font: "11px IBM Plex Mono",
+					fillColor: Cesium.Color.fromCssColorString("#c4b49a"),
+					pixelOffset: new Cesium.Cartesian2(10, 0)
+				}
+			});
+			if (showQuakes) for (const q of quakes.slice(0, 40)) viewer.entities.add({
+				name: `M${q.mag.toFixed(1)} ${q.place}`,
+				position: Cesium.Cartesian3.fromDegrees(q.lng, q.lat, 0),
+				point: {
+					pixelSize: 4 + q.mag,
+					color: Cesium.Color.fromCssColorString("#c45c4a")
+				}
+			});
+			if (showFlights) for (const f of flights) viewer.entities.add({
+				name: f.callsign,
+				position: Cesium.Cartesian3.fromDegrees(f.lng, f.lat, Math.max(500, f.alt ?? 8e3)),
+				point: {
+					pixelSize: 4,
+					color: Cesium.Color.fromCssColorString("#6e8ea3")
+				}
+			});
+		})();
+		return () => {
+			cancelled = true;
+		};
+	}, [
+		status,
+		pin,
+		center.lat,
+		center.lng,
+		quakes,
+		flights,
+		showFlights,
+		showQuakes
+	]);
+	(0, import_react.useEffect)(() => {
+		const viewer = viewerRef.current;
+		if (!viewer || status !== "ready" || !showRadar) return;
+		const url = currentRadarUrl();
+		if (!url || !overlayOn) return;
+		let cancelled = false;
+		(async () => {
+			const Cesium = await loadCesium();
+			if (cancelled) return;
+			const provider = new Cesium.UrlTemplateImageryProvider({ url });
+			const layer = viewer.imageryLayers.addImageryProvider(provider);
+			layer.alpha = .55;
+		})();
+		return () => {
+			cancelled = true;
+		};
+	}, [
+		showRadar,
+		overlayOn,
+		frameIndex,
+		status
+	]);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "relative h-full min-h-0",
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+			ref: host,
+			className: "absolute inset-0 bg-background"
+		}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+			className: "absolute left-3 top-3 z-10 max-w-sm rounded-lg border border-border bg-background/90 p-3 backdrop-blur-sm",
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
+					className: "font-display text-lg",
+					children: "God's eye"
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "mt-1 text-xs text-muted-foreground",
+					children: note
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "mt-3 flex flex-wrap gap-2",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Button, {
+							type: "button",
+							size: "sm",
+							variant: showFlights ? "default" : "outline",
+							onClick: () => setShowFlights((v) => !v),
+							children: ["Flights ", flights.length ? `(${flights.length})` : ""]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Button, {
+							type: "button",
+							size: "sm",
+							variant: showQuakes ? "default" : "outline",
+							onClick: () => setShowQuakes((v) => !v),
+							children: ["Quakes ", quakes.length ? `(${quakes.length})` : ""]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+							type: "button",
+							size: "sm",
+							variant: showRadar ? "default" : "outline",
+							onClick: () => setShowRadar((v) => !v),
+							children: "Radar drape"
+						})
+					]
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+					className: "mt-3 text-xs text-muted-foreground",
+					children: [pin ? pin.address : "No pin yet — globe is parked on the scout center.", " NEXRAD sites stay labeled. OpenSky is a 4° box around the pin; an empty box means the feed declined, not that the sky is empty."]
+				}),
+				status === "error" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "mt-2 text-sm text-destructive",
+					children: "The 3D globe did not load. Scout and Radar still run on the flat map."
+				})
+			]
+		})]
+	});
+}
+function Slider({ className, ...props }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Slider$1, {
+		className: cn("relative flex w-full touch-none select-none items-center", className),
+		...props,
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SliderTrack, {
+			className: "relative h-1.5 w-full grow overflow-hidden rounded-full bg-muted",
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SliderRange, { className: "absolute h-full bg-primary" })
+		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SliderThumb, { className: "block size-4 rounded-full border border-primary bg-foreground shadow-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50" })]
+	});
+}
+var fetchRadarCatalog = createServerFn({ method: "POST" }).handler(createSsrRpc("e07c6632c3f5d3f9bc0661daeb34542946e946611a977270ecc8365b695c5eac"));
+var fetchStormAlerts = createServerFn({ method: "POST" }).handler(createSsrRpc("dcbac4e0f07ebfd489c0027d24534914a4dd8c0d2c2cde3bf1d1870217671935"));
+var fetchNhcStorms = createServerFn({ method: "POST" }).handler(createSsrRpc("1906309b02009289551e47815683f9964e9bff579a933c64b16a3ff6fa684a11"));
+createServerFn({ method: "POST" }).validator((input) => ({
+	lat: number().min(-90).max(90).parse(input.lat),
+	lng: number().min(-180).max(180).parse(input.lng)
+})).handler(createSsrRpc("ac145873f96ff06f1988ec02e19f10d881e32015f37b4c2373ea448ab668c7e9"));
+function simplifyRing(ring, n) {
+	if (ring.length <= n) return ring;
+	const step = (ring.length - 1) / (n - 1);
+	const out = [];
+	for (let i = 0; i < n; i++) out.push(ring[Math.round(i * step)]);
+	return out;
+}
+function RadarWorkspace({ onOpenScout }) {
+	const host = (0, import_react.useRef)(null);
+	const mapRef = (0, import_react.useRef)(null);
+	const radarRef = (0, import_react.useRef)(null);
+	const alertsRef = (0, import_react.useRef)(null);
+	const center = usePropertyStore((s) => s.mapCenter);
+	const setCenter = usePropertyStore((s) => s.setMapCenter);
+	const setMode = usePropertyStore((s) => s.setGeofenceMode);
+	const setShape = usePropertyStore((s) => s.setGeofenceShape);
+	const clearVerts = usePropertyStore((s) => s.clearGeofenceVertices);
+	const addVertex = usePropertyStore((s) => s.addGeofenceVertex);
+	const frames = useWeatherStore((s) => s.frames);
+	const frameIndex = useWeatherStore((s) => s.frameIndex);
+	const setFrameIndex = useWeatherStore((s) => s.setFrameIndex);
+	const playing = useWeatherStore((s) => s.playing);
+	const setPlaying = useWeatherStore((s) => s.setPlaying);
+	const product = useWeatherStore((s) => s.product);
+	const setProduct = useWeatherStore((s) => s.setProduct);
+	const opacity = useWeatherStore((s) => s.opacity);
+	const setOpacity = useWeatherStore((s) => s.setOpacity);
+	const alerts = useWeatherStore((s) => s.alerts);
+	const alertsSource = useWeatherStore((s) => s.alertsSource);
+	const catalogStatus = useWeatherStore((s) => s.catalogStatus);
+	const selectedAlertId = useWeatherStore((s) => s.selectedAlertId);
+	const selectAlert = useWeatherStore((s) => s.selectAlert);
+	const step = useWeatherStore((s) => s.step);
+	const [storms, setStorms] = (0, import_react.useState)([]);
+	const sites = nearestNexrad(center.lat, center.lng, 4);
+	const frame = frames[frameIndex];
+	(0, import_react.useEffect)(() => {
+		let cancelled = false;
+		fetchNhcStorms().then((r) => {
+			if (!cancelled && r.ok) setStorms(r.storms.map((s) => ({
+				id: s.id,
+				name: s.name,
+				class: s.class
+			})));
+		});
+		return () => {
+			cancelled = true;
+		};
+	}, []);
+	(0, import_react.useEffect)(() => {
+		let cancelled = false;
+		if (!host.current) return;
+		(async () => {
+			const L = await import("../_libs/leaflet.mjs").then((n) => /* @__PURE__ */ __toESM(n.t()));
+			await Promise.resolve({});
+			if (cancelled || !host.current || mapRef.current) return;
+			const map = L.map(host.current, {
+				zoomControl: true,
+				attributionControl: true
+			}).setView([center.lat, center.lng], Math.max(6, center.zoom - 2));
+			L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+				attribution: "&copy; OSM &copy; CARTO",
+				subdomains: "abcd",
+				maxZoom: 18
+			}).addTo(map);
+			alertsRef.current = L.layerGroup().addTo(map);
+			mapRef.current = map;
+			window.setTimeout(() => map.invalidateSize(), 120);
+		})();
+		return () => {
+			cancelled = true;
+			mapRef.current?.remove();
+			mapRef.current = null;
+			radarRef.current = null;
+		};
+	}, []);
+	(0, import_react.useEffect)(() => {
+		const map = mapRef.current;
+		if (!map) return;
+		(async () => {
+			const L = await import("../_libs/leaflet.mjs").then((n) => /* @__PURE__ */ __toESM(n.t()));
+			radarRef.current?.remove();
+			radarRef.current = null;
+			const url = currentRadarUrl();
+			if (!url) return;
+			radarRef.current = L.tileLayer(url, {
+				opacity,
+				zIndex: 300
+			}).addTo(map);
+		})();
+	}, [
+		opacity,
+		frameIndex,
+		product,
+		frames.length
+	]);
+	(0, import_react.useEffect)(() => {
+		const map = mapRef.current;
+		const group = alertsRef.current;
+		if (!map || !group) return;
+		const here = nearestNexrad(center.lat, center.lng, 4);
+		let cancelled = false;
+		(async () => {
+			const L = await import("../_libs/leaflet.mjs").then((n) => /* @__PURE__ */ __toESM(n.t()));
+			if (cancelled || !alertsRef.current) return;
+			alertsRef.current.clearLayers();
+			for (const a of alerts) {
+				if (!a.ring || a.ring.length < 3) continue;
+				const on = a.id === selectedAlertId;
+				const poly = L.polygon(a.ring, {
+					color: a.severity.toLowerCase() === "extreme" ? "#c45c4a" : "#d4a574",
+					weight: on ? 2.5 : 1,
+					fillOpacity: on ? .28 : .12
+				}).bindTooltip(`${a.event}`);
+				poly.on("click", () => {
+					selectAlert(a.id);
+					if (a.centroid) map.flyTo([a.centroid.lat, a.centroid.lng], 8);
+				});
+				poly.addTo(alertsRef.current);
+			}
+			for (const s of here) L.circleMarker([s.lat, s.lng], {
+				radius: 5,
+				color: "#8aa07a",
+				weight: 1,
+				fillOpacity: .9
+			}).bindTooltip(`${s.id} · ${s.name} · ${Math.round(s.km)} km`).addTo(alertsRef.current);
+		})();
+		return () => {
+			cancelled = true;
+		};
+	}, [
+		alerts,
+		selectedAlertId,
+		selectAlert,
+		center.lat,
+		center.lng
+	]);
+	const fenceFromAlert = () => {
+		const a = alerts.find((x) => x.id === selectedAlertId) ?? alerts.find((x) => x.ring && x.ring.length >= 3);
+		if (!a?.ring) {
+			toast.error("No warning polygon to fence");
+			return;
+		}
+		clearVerts();
+		simplifyRing(a.ring, 18).forEach((v) => addVertex(v));
+		setShape("polygon");
+		setMode(true);
+		if (a.centroid) setCenter({
+			lat: a.centroid.lat,
+			lng: a.centroid.lng,
+			zoom: 11
+		});
+		selectAlert(a.id);
+		toast.message(`${a.event} is the fence. Scan it on Scout.`);
+		onOpenScout();
+	};
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "flex h-full min-h-0 flex-col lg:flex-row",
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+			className: "relative h-[46vh] min-h-64 w-full lg:h-full lg:w-[62%]",
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				ref: host,
+				className: "absolute inset-0"
+			}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "absolute bottom-3 left-3 z-[400] max-w-sm rounded-lg border border-border bg-background/90 p-3 backdrop-blur-sm",
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+						className: "text-xs uppercase tracking-wider text-muted-foreground",
+						children: [
+							"RainViewer mosaic · ",
+							catalogStatus,
+							frame ? ` · ${(/* @__PURE__ */ new Date(frame.time * 1e3)).toISOString().slice(11, 16)}Z ${frame.kind}` : ""
+						]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "mt-2 flex flex-wrap gap-2",
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+								type: "button",
+								size: "sm",
+								variant: "outline",
+								onClick: () => setPlaying(!playing),
+								children: playing ? "Pause" : "Play"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+								type: "button",
+								size: "sm",
+								variant: "ghost",
+								onClick: () => step(-1),
+								children: "Prev"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+								type: "button",
+								size: "sm",
+								variant: "ghost",
+								onClick: () => step(1),
+								children: "Next"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+								type: "button",
+								size: "sm",
+								variant: product === "radar" ? "default" : "outline",
+								onClick: () => setProduct("radar"),
+								children: "Reflectivity"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+								type: "button",
+								size: "sm",
+								variant: product === "infrared" ? "default" : "outline",
+								onClick: () => setProduct("infrared"),
+								children: "Infrared"
+							})
+						]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+						className: "mt-3",
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Slider, {
+							min: 0,
+							max: Math.max(0, frames.length - 1),
+							step: 1,
+							value: [frameIndex],
+							onValueChange: (v) => setFrameIndex(v[0] ?? 0)
+						})
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "mt-2 flex items-center gap-3 text-xs text-muted-foreground",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+							className: "w-16",
+							children: "Opacity"
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Slider, {
+							min: .2,
+							max: .9,
+							step: .05,
+							value: [opacity],
+							onValueChange: (v) => setOpacity(v[0] ?? .6)
+						})]
+					})
+				]
+			})]
+		}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("aside", {
+			className: "flex min-h-0 flex-1 flex-col border-t border-border lg:border-l lg:border-t-0",
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "border-b border-border px-4 py-3",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
+						className: "font-display text-xl",
+						children: "Storm desk"
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+						className: "mt-1 text-sm text-muted-foreground",
+						children: "OpenRadar-style mosaic from RainViewer, NWS and IEM polygons, and the nearest WSR-88D. A warning becomes a harvest fence."
+					})]
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "grid grid-cols-2 gap-2 border-b border-border px-4 py-3 text-sm",
+					children: sites.map((s) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+						type: "button",
+						className: "rounded-md border border-border px-2 py-2 text-left hover:bg-accent",
+						onClick: () => {
+							setCenter({
+								lat: s.lat,
+								lng: s.lng,
+								zoom: 8
+							});
+							mapRef.current?.flyTo([s.lat, s.lng], 8);
+						},
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+							className: "font-mono text-xs text-primary",
+							children: s.id
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+							className: "mt-0.5 block text-xs text-muted-foreground",
+							children: [
+								s.name,
+								" · ",
+								Math.round(s.km),
+								" km"
+							]
+						})]
+					}, s.id))
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "flex items-center justify-between gap-2 border-b border-border px-4 py-2",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+						className: "text-xs uppercase tracking-wider text-muted-foreground",
+						children: [
+							"Warnings ",
+							alerts.length ? `· ${alerts.length}` : "",
+							" ",
+							alertsSource ? `· ${alertsSource}` : ""
+						]
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+						type: "button",
+						size: "sm",
+						onClick: fenceFromAlert,
+						children: "Fence and scout"
+					})]
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("ul", {
+					className: "min-h-0 flex-1 overflow-y-auto",
+					children: [alerts.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", {
+						className: "px-4 py-6 text-sm text-muted-foreground",
+						children: "No active tornado, severe, flash-flood, or tropical polygons. The mosaic still loops. Quiet air is a real reading."
+					}), alerts.map((a) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", {
+						className: "border-b border-border",
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+							type: "button",
+							className: `flex w-full flex-col gap-0.5 px-4 py-3 text-left hover:bg-accent ${a.id === selectedAlertId ? "bg-secondary" : ""}`,
+							onClick: () => {
+								selectAlert(a.id);
+								if (a.centroid) {
+									setCenter({
+										lat: a.centroid.lat,
+										lng: a.centroid.lng,
+										zoom: 8
+									});
+									mapRef.current?.flyTo([a.centroid.lat, a.centroid.lng], 8);
+								}
+							},
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+								className: "text-sm",
+								children: a.event
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+								className: "text-xs text-muted-foreground",
+								children: [
+									a.severity,
+									" · ",
+									a.area || a.headline
+								]
+							})]
+						})
+					}, a.id))]
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "border-t border-border px-4 py-3 text-xs text-muted-foreground",
+					children: storms.length ? `NHC active: ${storms.map((s) => `${s.name} (${s.class || "cyclone"})`).join(", ")}` : "NHC basin is quiet. Gulf crews stay on the hail belt until an advisory posts."
+				})
+			]
+		})]
+	});
+}
+var Input = import_react.forwardRef(({ className, type, ...props }, ref) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+	type,
+	className: cn("flex h-11 w-full rounded-md border border-input bg-card px-3 text-sm text-foreground shadow-border placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50", className),
+	ref,
+	...props
+}));
+Input.displayName = "Input";
+function iso(days, hour) {
+	const d = /* @__PURE__ */ new Date();
+	d.setDate(d.getDate() + days);
+	d.setHours(hour, 0, 0, 0);
+	return d.toISOString();
+}
+function seed() {
+	const l1 = id("lead");
+	const l2 = id("lead");
+	const l3 = id("lead");
+	const l4 = id("lead");
+	const l5 = id("lead");
+	const l6 = id("lead");
+	const j1 = id("job");
+	const j2 = id("job");
+	const j3 = id("job");
+	const j4 = id("job");
+	return {
+		leads: [
+			{
+				id: l1,
+				name: "Renee Calderon",
+				phone: "(817) 555-0144",
+				email: "renee.c@example.net",
+				address: "412 Willow Park Dr",
+				city: "Burleson",
+				state: "TX",
+				source: "Recon / hail",
+				status: "inspection",
+				assigned: "Sales — Dana",
+				dps: 91,
+				storm: "DFW supercell 04 Sep",
+				notes: "2.0\" hail MESH, 19yr composition. Same-day inspect.",
+				createdAt: iso(-2, 9)
+			},
+			{
+				id: l2,
+				name: "Marcus Hale",
+				phone: "(682) 555-0190",
+				email: "mhale@example.net",
+				address: "8801 Trail Ridge Ct",
+				city: "Fort Worth",
+				state: "TX",
+				source: "Geofence harvest",
+				status: "estimate",
+				assigned: "Sales — Malik",
+				dps: 78,
+				storm: "DFW supercell 04 Sep",
+				notes: "Neighbor of Calderon. Gutter dents, garage oxidation.",
+				createdAt: iso(-2, 11)
+			},
+			{
+				id: l3,
+				name: "Priya Shah",
+				phone: "(214) 555-0118",
+				email: "priya.shah@example.net",
+				address: "19 Swiss Ave",
+				city: "Dallas",
+				state: "TX",
+				source: "Web form",
+				status: "new",
+				assigned: "Sales — Dana",
+				dps: 44,
+				storm: null,
+				notes: "Garage door inquiry, no storm.",
+				createdAt: iso(-1, 14)
+			},
+			{
+				id: l4,
+				name: "Owen Briggs",
+				phone: "(405) 555-0177",
+				email: "obr@example.net",
+				address: "2501 Classen Blvd",
+				city: "Oklahoma City",
+				state: "OK",
+				source: "Radar dispatch",
+				status: "contacted",
+				assigned: "Sales — Malik",
+				dps: 86,
+				storm: "OKC bow echo",
+				notes: "Warning polygon overlap. Wind + hail.",
+				createdAt: iso(0, 8)
+			},
+			{
+				id: l5,
+				name: "Elena Ruiz",
+				phone: "(813) 555-0133",
+				email: "eruiz@example.net",
+				address: "441 Bayshore Blvd",
+				city: "Tampa",
+				state: "FL",
+				source: "Referral",
+				status: "won",
+				assigned: "Torres crew",
+				dps: 62,
+				storm: null,
+				notes: "Tile roof, insurance supplement in flight.",
+				createdAt: iso(-8, 10)
+			},
+			{
+				id: l6,
+				name: "Closed — no damage",
+				phone: "",
+				email: "",
+				address: "100 Main St",
+				city: "Arlington",
+				state: "TX",
+				source: "Canvass",
+				status: "lost",
+				assigned: "Sales — Dana",
+				dps: 22,
+				storm: "DFW supercell 04 Sep",
+				notes: "Metal roof, no hits.",
+				createdAt: iso(-3, 16)
+			}
+		],
+		jobs: [
+			{
+				id: j1,
+				leadId: l5,
+				name: "Ruiz — tile roof",
+				address: "441 Bayshore Blvd, Tampa FL",
+				phase: "production",
+				crew: "Torres crew",
+				start: iso(0, 7),
+				end: iso(2, 16),
+				price: 28400,
+				cost: 17100,
+				createdAt: iso(-6, 9)
+			},
+			{
+				id: j2,
+				leadId: l1,
+				name: "Calderon — hail roof",
+				address: "412 Willow Park Dr, Burleson TX",
+				phase: "inspection",
+				crew: "Hale crew",
+				start: iso(0, 13),
+				end: iso(0, 15),
+				price: 0,
+				cost: 0,
+				createdAt: iso(-2, 9)
+			},
+			{
+				id: j3,
+				leadId: l2,
+				name: "Hale — garage + gutters",
+				address: "8801 Trail Ridge Ct, Fort Worth TX",
+				phase: "estimate",
+				crew: "Sales — Malik",
+				start: iso(1, 10),
+				end: iso(1, 11),
+				price: 6400,
+				cost: 3100,
+				createdAt: iso(-2, 12)
+			},
+			{
+				id: j4,
+				leadId: l5,
+				name: "Ruiz — supplement",
+				address: "441 Bayshore Blvd, Tampa FL",
+				phase: "invoicing",
+				crew: "Office",
+				start: iso(-1, 9),
+				end: iso(0, 17),
+				price: 4100,
+				cost: 900,
+				createdAt: iso(-1, 9)
+			}
+		],
+		estimates: [{
+			id: id("est"),
+			jobId: j3,
+			name: "Hale exterior",
+			status: "sent",
+			items: [
+				{
+					id: id("li"),
+					description: "Carriage garage door, 16×7",
+					qty: 1,
+					unit: "ea",
+					unitPrice: 2850
+				},
+				{
+					id: id("li"),
+					description: "5-inch gutters, front elevation",
+					qty: 42,
+					unit: "lf",
+					unitPrice: 18
+				},
+				{
+					id: id("li"),
+					description: "Dump + haul",
+					qty: 1,
+					unit: "ls",
+					unitPrice: 420
+				}
+			]
+		}, {
+			id: id("est"),
+			jobId: j1,
+			name: "Ruiz tile — approved",
+			status: "approved",
+			items: [
+				{
+					id: id("li"),
+					description: "Concrete tile reroof, 32 sq",
+					qty: 32,
+					unit: "sq",
+					unitPrice: 720
+				},
+				{
+					id: id("li"),
+					description: "Underlayment + flashings",
+					qty: 1,
+					unit: "ls",
+					unitPrice: 2800
+				},
+				{
+					id: id("li"),
+					description: "Permit / dump",
+					qty: 1,
+					unit: "ls",
+					unitPrice: 960
+				}
+			]
+		}],
+		feed: [
+			{
+				id: id("post"),
+				jobId: j2,
+				author: "system",
+				body: "Job opened from Recon Engine — DPS 91 CRITICAL.",
+				kind: "system",
+				createdAt: iso(-2, 9)
+			},
+			{
+				id: id("post"),
+				jobId: j2,
+				author: "Dana",
+				body: "Homeowner home after 1pm. Bring MESH print and neighbor comps.",
+				kind: "note",
+				createdAt: iso(-1, 16)
+			},
+			{
+				id: id("post"),
+				jobId: j1,
+				author: "Torres",
+				body: "Tear-off 60% complete. Two extra pitch-change valleys — writing a change order.",
+				kind: "note",
+				createdAt: iso(0, 11)
+			},
+			{
+				id: id("post"),
+				jobId: j1,
+				author: "system",
+				body: "Phase moved to Production.",
+				kind: "system",
+				createdAt: iso(-4, 8)
+			},
+			{
+				id: id("post"),
+				jobId: j3,
+				author: "Malik",
+				body: "Estimate sent via portal. Follow-up Thursday.",
+				kind: "note",
+				createdAt: iso(-1, 15)
+			}
+		],
+		events: [
+			{
+				id: id("evt"),
+				jobId: j2,
+				title: "Inspect Calderon",
+				type: "inspection",
+				start: iso(0, 13),
+				end: iso(0, 15),
+				who: "Hale crew"
+			},
+			{
+				id: id("evt"),
+				jobId: j1,
+				title: "Ruiz production",
+				type: "production",
+				start: iso(0, 7),
+				end: iso(0, 16),
+				who: "Torres crew"
+			},
+			{
+				id: id("evt"),
+				jobId: j3,
+				title: "Hale estimate follow-up",
+				type: "followup",
+				start: iso(1, 10),
+				end: iso(1, 11),
+				who: "Sales — Malik"
+			},
+			{
+				id: id("evt"),
+				jobId: j1,
+				title: "Ruiz production day 2",
+				type: "production",
+				start: iso(1, 7),
+				end: iso(1, 16),
+				who: "Torres crew"
+			},
+			{
+				id: id("evt"),
+				jobId: null,
+				title: "Storm desk standup",
+				type: "meeting",
+				start: iso(0, 8),
+				end: iso(0, 8.5),
+				who: "Office"
+			}
+		]
+	};
+}
+var memoryStorage = {
+	getItem: () => null,
+	setItem: () => {},
+	removeItem: () => {}
+};
+var useRoofproStore = create()(persist((set, get) => ({
+	...seed(),
+	tab: "pipeline",
+	selectedJobId: null,
+	selectedLeadId: null,
+	setTab: (t) => set({ tab: t }),
+	selectJob: (id) => set({
+		selectedJobId: id,
+		tab: id ? "jobs" : get().tab
+	}),
+	selectLead: (id) => set({ selectedLeadId: id }),
+	setLeadStatus: (id, status) => set({ leads: get().leads.map((l) => l.id === id ? {
+		...l,
+		status
+	} : l) }),
+	setJobPhase: (id, phase) => set({ jobs: get().jobs.map((j) => j.id === id ? {
+		...j,
+		phase
+	} : j) }),
+	addLead: (partial) => {
+		const lid = id("lead");
+		set({
+			leads: [{
+				id: lid,
+				phone: "",
+				email: "",
+				city: "",
+				state: "",
+				source: "Manual",
+				status: "new",
+				assigned: "Sales — Dana",
+				dps: 0,
+				storm: null,
+				notes: "",
+				createdAt: (/* @__PURE__ */ new Date()).toISOString(),
+				...partial
+			}, ...get().leads],
+			selectedLeadId: lid,
+			tab: "pipeline"
+		});
+		return lid;
+	},
+	addJobFromLead: (leadId) => {
+		const lead = get().leads.find((l) => l.id === leadId);
+		const jid = id("job");
+		set({
+			jobs: [{
+				id: jid,
+				leadId,
+				name: lead ? `${lead.name} — field` : "New job",
+				address: lead ? `${lead.address}, ${lead.city} ${lead.state}` : "",
+				phase: "inspection",
+				crew: "Hale crew",
+				start: (/* @__PURE__ */ new Date()).toISOString(),
+				end: new Date(Date.now() + 72e5).toISOString(),
+				price: 0,
+				cost: 0,
+				createdAt: (/* @__PURE__ */ new Date()).toISOString()
+			}, ...get().jobs],
+			selectedJobId: jid,
+			tab: "jobs",
+			feed: [{
+				id: id("post"),
+				jobId: jid,
+				author: "system",
+				body: `Job opened from lead ${lead?.name ?? leadId}.`,
+				kind: "system",
+				createdAt: (/* @__PURE__ */ new Date()).toISOString()
+			}, ...get().feed]
+		});
+		return jid;
+	},
+	addFeed: (jobId, body, author = "You") => set({ feed: [{
+		id: id("post"),
+		jobId,
+		author,
+		body,
+		kind: "note",
+		createdAt: (/* @__PURE__ */ new Date()).toISOString()
+	}, ...get().feed] }),
+	addEvent: (e) => set({ events: [{
+		...e,
+		id: id("evt")
+	}, ...get().events] })
+}), {
+	name: "roofpro-v1",
+	storage: createJSONStorage(() => typeof window === "undefined" ? memoryStorage : localStorage),
+	partialize: (s) => ({
+		leads: s.leads,
+		jobs: s.jobs,
+		estimates: s.estimates,
+		feed: s.feed,
+		events: s.events
+	})
+}));
+function estimateTotal(e) {
+	return e.items.reduce((s, i) => s + i.qty * i.unitPrice, 0);
+}
+var STATUSES = [
+	"new",
+	"contacted",
+	"inspection",
+	"estimate",
+	"won",
+	"lost"
+];
+var PHASES = [
+	"inspection",
+	"estimate",
+	"production",
+	"invoicing",
+	"completed"
+];
+function RoofproWorkspace() {
+	const tab = useRoofproStore((s) => s.tab);
+	const setTab = useRoofproStore((s) => s.setTab);
+	const leads = useRoofproStore((s) => s.leads);
+	const jobs = useRoofproStore((s) => s.jobs);
+	const estimates = useRoofproStore((s) => s.estimates);
+	const feed = useRoofproStore((s) => s.feed);
+	const events = useRoofproStore((s) => s.events);
+	const selectedJobId = useRoofproStore((s) => s.selectedJobId);
+	const selectJob = useRoofproStore((s) => s.selectJob);
+	const setLeadStatus = useRoofproStore((s) => s.setLeadStatus);
+	const setJobPhase = useRoofproStore((s) => s.setJobPhase);
+	const addLead = useRoofproStore((s) => s.addLead);
+	const addJobFromLead = useRoofproStore((s) => s.addJobFromLead);
+	const addFeed = useRoofproStore((s) => s.addFeed);
+	const dossier = usePropertyStore((s) => s.dossier);
+	const [note, setNote] = (0, import_react.useState)("");
+	const [draftName, setDraftName] = (0, import_react.useState)("");
+	const job = jobs.find((j) => j.id === selectedJobId) ?? jobs[0];
+	const jobFeed = feed.filter((f) => f.jobId === job?.id);
+	const margin = (0, import_react.useMemo)(() => {
+		const priced = jobs.filter((j) => j.price > 0);
+		const revenue = priced.reduce((s, j) => s + j.price, 0);
+		const cost = priced.reduce((s, j) => s + j.cost, 0);
+		return {
+			revenue,
+			cost,
+			profit: revenue - cost
+		};
+	}, [jobs]);
+	const openFromScout = () => {
+		if (!dossier) return;
+		addLead({
+			name: dossier.pin.address,
+			address: dossier.pin.address,
+			city: dossier.pin.city,
+			state: dossier.pin.state,
+			source: "Scout dossier",
+			dps: dossier.dps.score,
+			storm: null,
+			notes: `DPS ${dossier.dps.score}. AVM ${compactUsd(dossier.valuation.estimate)}.`,
+			status: "new"
+		});
+	};
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "flex h-full min-h-0 flex-col",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("header", {
+				className: "flex shrink-0 flex-col gap-3 border-b border-border px-4 py-3 md:flex-row md:items-end md:justify-between",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
+					className: "font-display text-2xl",
+					children: "RoofPro"
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "text-sm text-muted-foreground",
+					children: "Pipeline, jobs, and margin. This desk stays on this browser — it is not a multi-crew login."
+				})] }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "flex flex-wrap gap-2 text-xs text-muted-foreground",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+							className: "rounded-md border border-border px-2 py-1",
+							children: ["Revenue ", compactUsd(margin.revenue)]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+							className: "rounded-md border border-border px-2 py-1",
+							children: ["Cost ", compactUsd(margin.cost)]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+							className: "rounded-md border border-border px-2 py-1",
+							children: ["Gross ", compactUsd(margin.profit)]
+						})
+					]
+				})]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "flex shrink-0 gap-1 overflow-x-auto border-b border-border px-3 py-2",
+				children: [[
+					"pipeline",
+					"jobs",
+					"calendar",
+					"feed",
+					"estimates"
+				].map((t) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+					type: "button",
+					onClick: () => setTab(t),
+					className: `h-9 shrink-0 rounded-md border px-3 text-xs uppercase tracking-wider ${tab === t ? "border-primary text-foreground" : "border-transparent text-muted-foreground"}`,
+					children: t
+				}, t)), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+					type: "button",
+					size: "sm",
+					variant: "outline",
+					className: "ml-auto shrink-0",
+					onClick: openFromScout,
+					disabled: !dossier,
+					children: "Lead from scout"
+				})]
+			}),
+			tab === "pipeline" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				className: "min-h-0 flex-1 overflow-x-auto",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "flex h-full min-w-max gap-3 p-3",
+					children: STATUSES.map((status) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
+						className: "flex w-64 flex-col rounded-lg border border-border bg-card",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("header", {
+							className: "border-b border-border px-3 py-2 text-xs uppercase tracking-wider text-muted-foreground",
+							children: [
+								status,
+								" · ",
+								leads.filter((l) => l.status === status).length
+							]
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
+							className: "flex flex-1 flex-col gap-2 overflow-y-auto p-2",
+							children: leads.filter((l) => l.status === status).map((l) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
+								className: "rounded-md border border-border bg-background p-2",
+								children: [
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+										className: "text-sm",
+										children: l.name
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+										className: "text-xs text-muted-foreground",
+										children: [
+											l.address,
+											", ",
+											l.city
+										]
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+										className: "mt-1 text-xs text-muted-foreground",
+										children: [
+											"DPS ",
+											l.dps,
+											" · ",
+											l.source,
+											l.storm ? ` · ${l.storm}` : ""
+										]
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+										className: "mt-2 flex gap-1",
+										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("select", {
+											className: "h-8 min-w-0 flex-1 rounded-md border border-border bg-background px-1 text-xs",
+											value: l.status,
+											onChange: (e) => setLeadStatus(l.id, e.target.value),
+											children: STATUSES.map((s) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", {
+												value: s,
+												children: s
+											}, s))
+										}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+											type: "button",
+											size: "sm",
+											variant: "ghost",
+											onClick: () => addJobFromLead(l.id),
+											children: "Job"
+										})]
+									})
+								]
+							}, l.id))
+						})]
+					}, status))
+				})
+			}),
+			tab === "jobs" && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "grid min-h-0 flex-1 md:grid-cols-[280px_1fr]",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
+					className: "overflow-y-auto border-b border-border md:border-b-0 md:border-r",
+					children: jobs.map((j) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+						type: "button",
+						onClick: () => selectJob(j.id),
+						className: `w-full px-4 py-3 text-left hover:bg-accent ${job?.id === j.id ? "bg-secondary" : ""}`,
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+							className: "text-sm",
+							children: j.name
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+							className: "text-xs text-muted-foreground",
+							children: [
+								j.phase,
+								" · ",
+								j.crew
+							]
+						})]
+					}) }, j.id))
+				}), job && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "overflow-y-auto p-4",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
+							className: "font-display text-xl",
+							children: job.name
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+							className: "text-sm text-muted-foreground",
+							children: job.address
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "mt-3 flex flex-wrap items-center gap-2",
+							children: [
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("label", {
+									className: "text-xs text-muted-foreground",
+									children: "Phase"
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("select", {
+									className: "h-9 rounded-md border border-border bg-background px-2 text-sm",
+									value: job.phase,
+									onChange: (e) => setJobPhase(job.id, e.target.value),
+									children: PHASES.map((p) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", {
+										value: p,
+										children: p
+									}, p))
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+									className: "text-sm",
+									children: ["Price ", compactUsd(job.price)]
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+									className: "text-sm text-muted-foreground",
+									children: ["Cost ", compactUsd(job.cost)]
+								})
+							]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
+							className: "mt-4 space-y-2",
+							children: jobFeed.map((f) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
+								className: "rounded-md border border-border px-3 py-2 text-sm",
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+									className: "text-xs uppercase tracking-wider text-muted-foreground",
+									children: f.author
+								}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: f.body })]
+							}, f.id))
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("form", {
+							className: "mt-3 flex gap-2",
+							onSubmit: (e) => {
+								e.preventDefault();
+								if (!note.trim()) return;
+								addFeed(job.id, note.trim());
+								setNote("");
+							},
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
+								value: note,
+								onChange: (e) => setNote(e.target.value),
+								placeholder: "Field note"
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+								type: "submit",
+								children: "Post"
+							})]
+						})
+					]
+				})]
+			}),
+			tab === "calendar" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
+				className: "min-h-0 flex-1 overflow-y-auto p-4",
+				children: [
+					0,
+					1,
+					2,
+					3
+				].map((offset) => {
+					const day = /* @__PURE__ */ new Date();
+					day.setDate(day.getDate() + offset);
+					const items = events.filter((ev) => isSameDay(new Date(ev.start), day));
+					return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
+						className: "mb-4",
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+								className: "text-xs uppercase tracking-wider text-muted-foreground",
+								children: format(day, "EEEE MMM d")
+							}),
+							items.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+								className: "mt-1 text-sm text-muted-foreground",
+								children: "Clear."
+							}),
+							items.map((ev) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+								className: "mt-1 text-sm",
+								children: [
+									format(new Date(ev.start), "h:mm a"),
+									" · ",
+									ev.title,
+									" · ",
+									ev.who
+								]
+							}, ev.id))
+						]
+					}, offset);
+				})
+			}),
+			tab === "feed" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
+				className: "min-h-0 flex-1 overflow-y-auto",
+				children: feed.map((f) => {
+					const j = jobs.find((x) => x.id === f.jobId);
+					return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
+						className: "border-b border-border px-4 py-3",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+							className: "text-xs uppercase tracking-wider text-muted-foreground",
+							children: [
+								f.author,
+								" · ",
+								j?.name ?? "Job",
+								" · ",
+								format(new Date(f.createdAt), "MMM d h:mm a")
+							]
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+							className: "text-sm",
+							children: f.body
+						})]
+					}, f.id);
+				})
+			}),
+			tab === "estimates" && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "min-h-0 flex-1 overflow-y-auto p-4",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("form", {
+					className: "mb-4 flex max-w-md gap-2",
+					onSubmit: (e) => {
+						e.preventDefault();
+						if (!draftName.trim()) return;
+						addLead({
+							name: draftName.trim(),
+							address: "Address pending",
+							source: "Manual",
+							status: "new"
+						});
+						setDraftName("");
+					},
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
+						value: draftName,
+						onChange: (e) => setDraftName(e.target.value),
+						placeholder: "New lead name"
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+						type: "submit",
+						children: "Add lead"
+					})]
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
+					className: "space-y-3",
+					children: estimates.map((est) => {
+						const j = jobs.find((x) => x.id === est.jobId);
+						const total = estimateTotal(est);
+						return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
+							className: "rounded-lg border border-border p-3",
+							children: [
+								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+									className: "flex items-baseline justify-between gap-3",
+									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+										className: "text-sm",
+										children: [
+											est.name,
+											" · ",
+											est.status
+										]
+									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+										className: "font-mono text-sm",
+										children: compactUsd(total)
+									})]
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+									className: "text-xs text-muted-foreground",
+									children: j?.address
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
+									className: "mt-2 space-y-1 text-sm",
+									children: est.items.map((item) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
+										className: "flex justify-between gap-3",
+										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { children: [
+											item.description,
+											" · ",
+											item.qty,
+											" ",
+											item.unit
+										] }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+											className: "tabular text-muted-foreground",
+											children: compactUsd(item.qty * item.unitPrice)
+										})]
+									}, item.id))
+								})
+							]
+						}, est.id);
+					})
+				})]
+			})
+		]
+	});
+}
 function ComparisonSlider({ before, after, loading }) {
 	const [pos, setPos] = (0, import_react.useState)(56);
 	const ref = (0, import_react.useRef)(null);
@@ -84,40 +1782,6 @@ function ComparisonSlider({ before, after, loading }) {
 		]
 	});
 }
-var buttonVariants = cva("inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 disabled:pointer-events-none disabled:opacity-40 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0", {
-	variants: {
-		variant: {
-			default: "bg-primary text-primary-foreground hover:bg-primary/90",
-			secondary: "bg-secondary text-secondary-foreground hover:bg-accent",
-			outline: "border border-border bg-transparent hover:bg-accent",
-			ghost: "hover:bg-accent hover:text-accent-foreground",
-			destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-			link: "text-primary underline-offset-4 hover:underline"
-		},
-		size: {
-			default: "h-11 px-4",
-			sm: "h-9 rounded-md px-3 text-xs",
-			lg: "h-12 rounded-lg px-5",
-			icon: "size-11"
-		}
-	},
-	defaultVariants: {
-		variant: "default",
-		size: "default"
-	}
-});
-var Button = import_react.forwardRef(({ className, variant, size, asChild = false, ...props }, ref) => {
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(asChild ? Slot : "button", {
-		className: cn(buttonVariants({
-			variant,
-			size,
-			className
-		})),
-		ref,
-		...props
-	});
-});
-Button.displayName = "Button";
 function Card({ className, ...props }) {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 		className: cn("rounded-xl border border-border bg-card text-card-foreground shadow-border", className),
@@ -187,155 +1851,6 @@ var Textarea = import_react.forwardRef(({ className, ...props }, ref) => /* @__P
 	...props
 }));
 Textarea.displayName = "Textarea";
-var SAMPLE_PINS = SAMPLES.map((s) => ({
-	label: s.label,
-	blurb: s.blurb,
-	pin: {
-		id: `sample_${s.lat}`,
-		label: `${s.address}, ${s.city}, ${s.state}`,
-		address: s.address,
-		city: s.city,
-		state: s.state,
-		postcode: s.postcode,
-		lat: s.lat,
-		lng: s.lng,
-		neighborhood: s.neighborhood,
-		source: "sample"
-	}
-}));
-var memoryStorage = {
-	getItem: () => null,
-	setItem: () => {},
-	removeItem: () => {}
-};
-var usePropertyStore = create()(persist((set, get) => ({
-	selected: null,
-	geofenceMode: false,
-	geofenceRadiusM: 800,
-	zoneHits: [],
-	harvest: [],
-	dossier: null,
-	dossierStatus: "idle",
-	dossierError: null,
-	neighborhood: null,
-	neighborhoodStatus: "idle",
-	amenities: [],
-	panelTab: "dossier",
-	render: null,
-	campaign: [],
-	campaignStatus: "idle",
-	history: [],
-	watchlist: [],
-	mapCenter: {
-		lat: 32.7555,
-		lng: -97.3308,
-		zoom: 11
-	},
-	mapLayer: "streets",
-	scenarioId: "curb",
-	chat: [],
-	chatStatus: "idle",
-	scanning: false,
-	tractRing: null,
-	buildingRing: null,
-	selectPin: (pin) => {
-		set({
-			selected: pin,
-			history: [pin, ...get().history.filter((h) => h.id !== pin.id)].slice(0, 12),
-			mapCenter: {
-				lat: pin.lat,
-				lng: pin.lng,
-				zoom: 16
-			},
-			dossier: null,
-			dossierStatus: "idle",
-			dossierError: null,
-			neighborhood: null,
-			neighborhoodStatus: "idle",
-			amenities: [],
-			campaign: [],
-			chat: [],
-			panelTab: "dossier",
-			scenarioId: "curb",
-			tractRing: null,
-			buildingRing: null
-		});
-	},
-	clearSelection: () => set({
-		selected: null,
-		dossier: null,
-		dossierStatus: "idle",
-		neighborhood: null,
-		zoneHits: [],
-		harvest: [],
-		render: null,
-		chat: [],
-		tractRing: null,
-		buildingRing: null
-	}),
-	setGeofenceMode: (on) => set({ geofenceMode: on }),
-	setGeofenceRadius: (m) => set({ geofenceRadiusM: m }),
-	setZoneHits: (hits) => set({ zoneHits: hits }),
-	setHarvest: (h) => set({ harvest: h }),
-	setDossier: (d, status = d ? "ready" : "idle", error = null) => set({
-		dossier: d,
-		dossierStatus: status,
-		dossierError: error
-	}),
-	setNeighborhood: (n, status = n ? "ready" : "idle") => set({
-		neighborhood: n,
-		neighborhoodStatus: status
-	}),
-	setAmenities: (a) => set({ amenities: a }),
-	setPanelTab: (t) => set({ panelTab: t }),
-	setRender: (r) => set({ render: r }),
-	patchRender: (p) => {
-		const cur = get().render;
-		if (!cur) return;
-		set({ render: {
-			...cur,
-			...p
-		} });
-	},
-	setCampaign: (c, status = "ready") => set({
-		campaign: c,
-		campaignStatus: status
-	}),
-	setMapCenter: (c) => set({ mapCenter: c }),
-	setMapLayer: (l) => set({ mapLayer: l }),
-	setScenarioId: (id) => set({ scenarioId: id }),
-	pushChat: (t) => set({ chat: [...get().chat, t] }),
-	setChat: (c) => set({ chat: c }),
-	setChatStatus: (s) => set({ chatStatus: s }),
-	setScanning: (on) => set({ scanning: on }),
-	toggleWatch: (item) => {
-		set({ watchlist: get().watchlist.some((w) => w.pin.id === item.pin.id) ? get().watchlist.filter((w) => w.pin.id !== item.pin.id) : [item, ...get().watchlist].slice(0, 6) });
-	},
-	setTractRing: (r) => set({ tractRing: r }),
-	setBuildingRing: (r) => set({ buildingRing: r })
-}), {
-	name: "propertyinsight-v3",
-	storage: createJSONStorage(() => typeof window === "undefined" ? memoryStorage : localStorage),
-	partialize: (s) => ({
-		history: s.history,
-		watchlist: s.watchlist,
-		geofenceRadiusM: s.geofenceRadiusM,
-		mapCenter: s.mapCenter,
-		mapLayer: s.mapLayer
-	})
-}));
-var createSsrRpc = (functionId) => {
-	const url = "/_serverFn/" + functionId;
-	const serverFnMeta = { id: functionId };
-	const fn = async (...args) => {
-		return (await getServerFnById(functionId, { origin: "server" }))(...args);
-	};
-	return Object.assign(fn, {
-		url,
-		serverFnMeta,
-		[TSS_SERVER_FUNCTION]: true
-	});
-};
 var FEATURES = [
 	"garage_door",
 	"roof",
@@ -784,16 +2299,6 @@ function AnalystPanel() {
 		]
 	});
 }
-function Slider({ className, ...props }) {
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Slider$1, {
-		className: cn("relative flex w-full touch-none select-none items-center", className),
-		...props,
-		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SliderTrack, {
-			className: "relative h-1.5 w-full grow overflow-hidden rounded-full bg-muted",
-			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SliderRange, { className: "absolute h-full bg-primary" })
-		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SliderThumb, { className: "block size-4 rounded-full border border-primary bg-foreground shadow-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50" })]
-	});
-}
 var searchAddress = createServerFn({ method: "POST" }).validator((input) => {
 	return { q: string().trim().min(2).max(180).parse(input.q) };
 }).handler(createSsrRpc("b3efc04aff8c4069056ac148ae822f19c19c0cc0728b8876fe34f1aa056b9a21"));
@@ -809,7 +2314,8 @@ var fetchAmenities = createServerFn({ method: "POST" }).validator((input) => ({
 var scanGeofence = createServerFn({ method: "POST" }).validator((input) => ({
 	lat: number().parse(input.lat),
 	lng: number().parse(input.lng),
-	radiusM: number().min(120).max(3200).parse(input.radiusM)
+	radiusM: number().min(120).max(3200).parse(input.radiusM),
+	polygon: input.polygon ? array(tuple([number(), number()])).min(3).max(24).parse(input.polygon) : void 0
 })).handler(createSsrRpc("d74fa70d7d149500ae13ad308c37cebb78104aa55f623595be00c7a799f1cb78"));
 function CampaignPanel({ onZoneSelect }) {
 	const selected = usePropertyStore((s) => s.selected);
@@ -1017,13 +2523,6 @@ function CampaignPanel({ onZoneSelect }) {
 		]
 	});
 }
-var Input = import_react.forwardRef(({ className, type, ...props }, ref) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
-	type,
-	className: cn("flex h-11 w-full rounded-md border border-input bg-card px-3 text-sm text-foreground shadow-border placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50", className),
-	ref,
-	...props
-}));
-Input.displayName = "Input";
 function CommandSearch({ onSelect }) {
 	const [q, setQ] = (0, import_react.useState)("");
 	const [open, setOpen] = (0, import_react.useState)(false);
@@ -2116,17 +3615,27 @@ function Score({ label, value }) {
 function amenityColor(kind) {
 	return AMENITY_COLORS[kind] ?? "#9c9a92";
 }
+function alertColor(sev) {
+	const s = sev.toLowerCase();
+	if (s === "extreme") return "#c45c4a";
+	if (s === "severe") return "#d4a574";
+	return "#6e8ea3";
+}
 function PropertyMap({ onMapClick, onZoneSelect }) {
 	const host = (0, import_react.useRef)(null);
 	const mapRef = (0, import_react.useRef)(null);
 	const streetsRef = (0, import_react.useRef)(null);
 	const satRef = (0, import_react.useRef)(null);
+	const radarRef = (0, import_react.useRef)(null);
 	const pinRef = (0, import_react.useRef)(null);
 	const circleRef = (0, import_react.useRef)(null);
+	const polyRef = (0, import_react.useRef)(null);
+	const vertsRef = (0, import_react.useRef)(null);
 	const zoneRef = (0, import_react.useRef)(null);
 	const amenityRef = (0, import_react.useRef)(null);
 	const tractRef = (0, import_react.useRef)(null);
 	const bldgRef = (0, import_react.useRef)(null);
+	const alertsRef = (0, import_react.useRef)(null);
 	const onClickRef = (0, import_react.useRef)(onMapClick);
 	const onZoneRef = (0, import_react.useRef)(onZoneSelect);
 	onClickRef.current = onMapClick;
@@ -2140,6 +3649,17 @@ function PropertyMap({ onMapClick, onZoneSelect }) {
 	const mapLayer = usePropertyStore((s) => s.mapLayer);
 	const tractRing = usePropertyStore((s) => s.tractRing);
 	const buildingRing = usePropertyStore((s) => s.buildingRing);
+	const shape = usePropertyStore((s) => s.geofenceShape);
+	const vertices = usePropertyStore((s) => s.geofenceVertices);
+	const overlayOn = useWeatherStore((s) => s.overlayOn);
+	const opacity = useWeatherStore((s) => s.opacity);
+	const frameIndex = useWeatherStore((s) => s.frameIndex);
+	const product = useWeatherStore((s) => s.product);
+	const frames = useWeatherStore((s) => s.frames);
+	const alertsOn = useWeatherStore((s) => s.alertsOn);
+	const alerts = useWeatherStore((s) => s.alerts);
+	const selectedAlertId = useWeatherStore((s) => s.selectedAlertId);
+	const selectAlert = useWeatherStore((s) => s.selectAlert);
 	(0, import_react.useEffect)(() => {
 		let cancelled = false;
 		if (!host.current) return;
@@ -2163,10 +3683,17 @@ function PropertyMap({ onMapClick, onZoneSelect }) {
 				maxZoom: 19
 			});
 			map.on("click", (e) => {
+				const st = usePropertyStore.getState();
+				if (st.geofenceMode && st.geofenceShape === "polygon") {
+					st.addGeofenceVertex([e.latlng.lat, e.latlng.lng]);
+					return;
+				}
 				onClickRef.current(e.latlng.lat, e.latlng.lng);
 			});
 			zoneRef.current = L.layerGroup().addTo(map);
 			amenityRef.current = L.layerGroup().addTo(map);
+			vertsRef.current = L.layerGroup().addTo(map);
+			alertsRef.current = L.layerGroup().addTo(map);
 			mapRef.current = map;
 			const invalidate = () => map.invalidateSize();
 			requestAnimationFrame(invalidate);
@@ -2227,7 +3754,7 @@ function PropertyMap({ onMapClick, onZoneSelect }) {
 			const L = await import("../_libs/leaflet.mjs").then((n) => /* @__PURE__ */ __toESM(n.t()));
 			circleRef.current?.remove();
 			circleRef.current = null;
-			if (!geofenceMode || !selected) return;
+			if (!geofenceMode || !selected || shape !== "circle") return;
 			circleRef.current = L.circle([selected.lat, selected.lng], {
 				radius,
 				color: "#8aa07a",
@@ -2246,8 +3773,41 @@ function PropertyMap({ onMapClick, onZoneSelect }) {
 	}, [
 		geofenceMode,
 		radius,
-		selected
+		selected,
+		shape
 	]);
+	(0, import_react.useEffect)(() => {
+		const map = mapRef.current;
+		const group = vertsRef.current;
+		if (!map || !group) return;
+		(async () => {
+			const L = await import("../_libs/leaflet.mjs").then((n) => /* @__PURE__ */ __toESM(n.t()));
+			group.clearLayers();
+			polyRef.current?.remove();
+			polyRef.current = null;
+			if (!geofenceMode || !vertices.length) return;
+			if (vertices.length >= 3) polyRef.current = L.polygon(vertices, {
+				color: "#8aa07a",
+				weight: 1.5,
+				fillColor: "#8aa07a",
+				fillOpacity: .12
+			}).addTo(map);
+			else if (vertices.length === 2) L.polyline(vertices, {
+				color: "#8aa07a",
+				weight: 1.5,
+				dashArray: "4 6"
+			}).addTo(group);
+			for (const [lat, lng] of vertices) {
+				const icon = L.divIcon({
+					className: "pi-pin",
+					html: `<div class="pi-vertex"></div>`,
+					iconSize: [10, 10],
+					iconAnchor: [5, 5]
+				});
+				L.marker([lat, lng], { icon }).addTo(group);
+			}
+		})();
+	}, [geofenceMode, vertices]);
 	(0, import_react.useEffect)(() => {
 		const map = mapRef.current;
 		const group = zoneRef.current;
@@ -2323,6 +3883,59 @@ function PropertyMap({ onMapClick, onZoneSelect }) {
 			}).bindTooltip("OSM building").addTo(map);
 		})();
 	}, [buildingRing]);
+	(0, import_react.useEffect)(() => {
+		const map = mapRef.current;
+		if (!map) return;
+		(async () => {
+			const L = await import("../_libs/leaflet.mjs").then((n) => /* @__PURE__ */ __toESM(n.t()));
+			radarRef.current?.remove();
+			radarRef.current = null;
+			if (!overlayOn) return;
+			const url = currentRadarUrl();
+			if (!url) return;
+			radarRef.current = L.tileLayer(url, {
+				opacity,
+				zIndex: 350,
+				className: "pi-radar-tiles"
+			}).addTo(map);
+		})();
+	}, [
+		overlayOn,
+		opacity,
+		frameIndex,
+		product,
+		frames.length
+	]);
+	(0, import_react.useEffect)(() => {
+		const map = mapRef.current;
+		const group = alertsRef.current;
+		if (!map || !group) return;
+		(async () => {
+			const L = await import("../_libs/leaflet.mjs").then((n) => /* @__PURE__ */ __toESM(n.t()));
+			group.clearLayers();
+			if (!alertsOn) return;
+			for (const a of alerts) {
+				if (!a.ring || a.ring.length < 3) continue;
+				const selected = a.id === selectedAlertId;
+				const poly = L.polygon(a.ring, {
+					color: alertColor(a.severity),
+					weight: selected ? 2.5 : 1.25,
+					fillColor: alertColor(a.severity),
+					fillOpacity: selected ? .28 : .14
+				}).bindTooltip(`${a.event} · ${a.severity}`);
+				poly.on("click", (e) => {
+					e.originalEvent?.stopPropagation?.();
+					selectAlert(a.id);
+				});
+				poly.addTo(group);
+			}
+		})();
+	}, [
+		alerts,
+		alertsOn,
+		selectedAlertId,
+		selectAlert
+	]);
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 		ref: host,
 		className: "absolute inset-0 h-full w-full"
@@ -2334,6 +3947,12 @@ function MapHost({ onMapClick, onZoneSelect }) {
 	const setMapLayer = usePropertyStore((s) => s.setMapLayer);
 	const amenities = usePropertyStore((s) => s.amenities);
 	const dossier = usePropertyStore((s) => s.dossier);
+	const overlayOn = useWeatherStore((s) => s.overlayOn);
+	const setOverlayOn = useWeatherStore((s) => s.setOverlayOn);
+	const alertsOn = useWeatherStore((s) => s.alertsOn);
+	const setAlertsOn = useWeatherStore((s) => s.setAlertsOn);
+	const alerts = useWeatherStore((s) => s.alerts);
+	const frame = useWeatherStore((s) => s.frames)[useWeatherStore((s) => s.frameIndex)];
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 		className: "relative h-full min-h-[280px] w-full overflow-hidden bg-background",
 		children: [
@@ -2343,20 +3962,44 @@ function MapHost({ onMapClick, onZoneSelect }) {
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 				className: "absolute right-3 top-3 z-[400] flex flex-col gap-1",
-				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
-					type: "button",
-					className: `rounded-md border px-2.5 py-1.5 text-[11px] uppercase tracking-wider ${mapLayer === "streets" ? "border-primary bg-background text-foreground" : "border-border bg-background/80 text-muted-foreground"}`,
-					onClick: () => setMapLayer("streets"),
-					children: "Streets"
-				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
-					type: "button",
-					className: `rounded-md border px-2.5 py-1.5 text-[11px] uppercase tracking-wider ${mapLayer === "satellite" ? "border-primary bg-background text-foreground" : "border-border bg-background/80 text-muted-foreground"}`,
-					onClick: () => setMapLayer("satellite"),
-					children: "Satellite"
-				})]
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+						type: "button",
+						className: `rounded-md border px-2.5 py-1.5 text-[11px] uppercase tracking-wider ${mapLayer === "streets" ? "border-primary bg-background text-foreground" : "border-border bg-background/80 text-muted-foreground"}`,
+						onClick: () => setMapLayer("streets"),
+						children: "Streets"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+						type: "button",
+						className: `rounded-md border px-2.5 py-1.5 text-[11px] uppercase tracking-wider ${mapLayer === "satellite" ? "border-primary bg-background text-foreground" : "border-border bg-background/80 text-muted-foreground"}`,
+						onClick: () => setMapLayer("satellite"),
+						children: "Satellite"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+						type: "button",
+						className: `rounded-md border px-2.5 py-1.5 text-[11px] uppercase tracking-wider ${overlayOn ? "border-primary bg-background text-foreground" : "border-border bg-background/80 text-muted-foreground"}`,
+						onClick: () => setOverlayOn(!overlayOn),
+						children: "Radar"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+						type: "button",
+						className: `rounded-md border px-2.5 py-1.5 text-[11px] uppercase tracking-wider ${alertsOn ? "border-primary bg-background text-foreground" : "border-border bg-background/80 text-muted-foreground"}`,
+						onClick: () => setAlertsOn(!alertsOn),
+						children: ["Warnings ", alerts.length ? `(${alerts.length})` : ""]
+					})
+				]
+			}),
+			overlayOn && frame && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "absolute bottom-10 right-3 z-[400] rounded-md border border-border bg-background/85 px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground backdrop-blur-sm",
+				children: [
+					"NEXRAD ",
+					(/* @__PURE__ */ new Date(frame.time * 1e3)).toISOString().slice(11, 16),
+					"Z · ",
+					frame.kind
+				]
 			}),
 			dossier?.flood && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				className: "absolute right-3 top-24 z-[400] rounded-md border border-border bg-background/85 px-2.5 py-1.5 text-[11px] uppercase tracking-wider backdrop-blur-sm",
+				className: "absolute right-3 top-44 z-[400] rounded-md border border-border bg-background/85 px-2.5 py-1.5 text-[11px] uppercase tracking-wider backdrop-blur-sm",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
 					className: dossier.flood.sfha ? "text-destructive" : "text-muted-foreground",
 					children: ["FEMA ", dossier.flood.zone]
@@ -2459,7 +4102,7 @@ function ScorecardPanel() {
 								tick: false,
 								axisLine: false
 							}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Radar, {
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Radar$1, {
 								dataKey: "score",
 								stroke: "#8aa07a",
 								fill: "#8aa07a",
@@ -2649,6 +4292,180 @@ function ScrollArea({ className, children, ...props }) {
 			className: "flex touch-none select-none p-0.5 data-[orientation=vertical]:h-full data-[orientation=vertical]:w-2",
 			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Thumb, { className: "relative flex-1 rounded-full bg-border" })
 		})]
+	});
+}
+function GeofenceDock({ onZoneSelect }) {
+	const selected = usePropertyStore((s) => s.selected);
+	const radius = usePropertyStore((s) => s.geofenceRadiusM);
+	const setRadius = usePropertyStore((s) => s.setGeofenceRadius);
+	const scanning = usePropertyStore((s) => s.scanning);
+	const setScanning = usePropertyStore((s) => s.setScanning);
+	const setZoneHits = usePropertyStore((s) => s.setZoneHits);
+	const setHarvest = usePropertyStore((s) => s.setHarvest);
+	const harvest = usePropertyStore((s) => s.harvest);
+	const zoneHits = usePropertyStore((s) => s.zoneHits);
+	const shape = usePropertyStore((s) => s.geofenceShape);
+	const setShape = usePropertyStore((s) => s.setGeofenceShape);
+	const verts = usePropertyStore((s) => s.geofenceVertices);
+	const undo = usePropertyStore((s) => s.undoGeofenceVertex);
+	const clearVerts = usePropertyStore((s) => s.clearGeofenceVertices);
+	const dossier = usePropertyStore((s) => s.dossier);
+	const setDossier = usePropertyStore((s) => s.setDossier);
+	const mapCenter = usePropertyStore((s) => s.mapCenter);
+	const selectedAlertId = useWeatherStore((s) => s.selectedAlertId);
+	const alerts = useWeatherStore((s) => s.alerts);
+	const addVertex = usePropertyStore((s) => s.addGeofenceVertex);
+	function simplifyRing(ring, n) {
+		if (ring.length <= n) return ring;
+		const step = (ring.length - 1) / (n - 1);
+		const out = [];
+		for (let i = 0; i < n; i++) out.push(ring[Math.round(i * step)]);
+		return out;
+	}
+	const scan = async () => {
+		const origin = selected ?? {
+			lat: mapCenter.lat,
+			lng: mapCenter.lng
+		};
+		const polygon = shape === "polygon" && verts.length >= 3 ? verts : void 0;
+		if (shape === "polygon" && !polygon) {
+			toast.error("Drop at least three vertices, or switch to radius");
+			return;
+		}
+		setScanning(true);
+		try {
+			const res = await scanGeofence({ data: {
+				lat: origin.lat,
+				lng: origin.lng,
+				radiusM: radius,
+				polygon
+			} });
+			if (!res.ok) toast.error(res.error);
+			setZoneHits(res.hits);
+			const scored = scoreHarvest(res.hits);
+			setHarvest(scored);
+			if (res.hits.length === 0) toast.message("No addressed buildings — widen the fence or redraw.");
+			else {
+				toast.message(`${res.hits.length} addressed buildings · ranked by DPS`);
+				if (dossier && selected) setDossier({
+					...dossier,
+					comps: overlayComps(selected, dossier.valuation.estimate, res.hits)
+				}, "ready");
+			}
+		} catch {
+			toast.error("Geofence scan failed");
+		} finally {
+			setScanning(false);
+		}
+	};
+	const setGeofenceMode = usePropertyStore((s) => s.setGeofenceMode);
+	const useAlert = () => {
+		const a = alerts.find((x) => x.id === selectedAlertId);
+		if (!a?.ring || a.ring.length < 3) {
+			toast.error("Select a warning that has a polygon");
+			return;
+		}
+		const ring = simplifyRing(a.ring, 18);
+		clearVerts();
+		ring.forEach((v) => addVertex(v));
+		setShape("polygon");
+		setGeofenceMode(true);
+		toast.message(`Fence copied from ${a.event}`);
+	};
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "absolute left-3 right-3 top-3 z-[500] rounded-lg border border-border bg-background/88 p-3 backdrop-blur-sm lg:right-auto lg:w-[22rem]",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "mb-2 flex items-center justify-between text-xs text-muted-foreground",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "Geofence" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+					className: "tabular",
+					children: shape === "circle" ? formatMiles(radius) : `${verts.length} vertices`
+				})]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "mb-3 grid grid-cols-2 gap-1",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+					type: "button",
+					className: `rounded-md border px-2 py-1.5 text-[11px] uppercase tracking-wider ${shape === "circle" ? "border-primary text-foreground" : "border-border text-muted-foreground"}`,
+					onClick: () => setShape("circle"),
+					children: "Radius"
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+					type: "button",
+					className: `rounded-md border px-2 py-1.5 text-[11px] uppercase tracking-wider ${shape === "polygon" ? "border-primary text-foreground" : "border-border text-muted-foreground"}`,
+					onClick: () => setShape("polygon"),
+					children: "Draw poly"
+				})]
+			}),
+			shape === "circle" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Slider, {
+				min: 200,
+				max: 2400,
+				step: 50,
+				value: [radius],
+				onValueChange: (v) => setRadius(v[0] ?? 800)
+			}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "text-xs text-muted-foreground",
+				children: "Click the map to drop vertices. Three or more closes a harvest polygon."
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "mt-3 flex flex-wrap items-center gap-2",
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+						type: "button",
+						size: "sm",
+						onClick: () => void scan(),
+						disabled: scanning,
+						children: scanning ? "Scanning…" : "Scan zone"
+					}),
+					shape === "polygon" && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+						type: "button",
+						size: "sm",
+						variant: "outline",
+						onClick: undo,
+						disabled: !verts.length,
+						children: "Undo"
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+						type: "button",
+						size: "sm",
+						variant: "ghost",
+						onClick: clearVerts,
+						disabled: !verts.length,
+						children: "Clear"
+					})] }),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+						type: "button",
+						size: "sm",
+						variant: "outline",
+						onClick: useAlert,
+						disabled: !selectedAlertId,
+						children: "Alert fence"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+						className: "text-xs text-muted-foreground",
+						children: [zoneHits.length, " harvest"]
+					})
+				]
+			}),
+			harvest.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
+				className: "mt-3 max-h-40 overflow-y-auto border-t border-border pt-2",
+				children: harvest.slice(0, 10).map((h) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+					type: "button",
+					className: "flex w-full items-baseline justify-between gap-2 rounded-md px-1 py-1 text-left text-xs hover:bg-accent",
+					onClick: () => onZoneSelect(h.pin),
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+						className: "truncate",
+						children: h.pin.address
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+						className: "shrink-0 tabular text-muted-foreground",
+						children: [
+							"DPS ",
+							h.dps,
+							" · ",
+							compactUsd(h.estimate)
+						]
+					})]
+				}) }, h.pin.id))
+			})
+		]
 	});
 }
 var Tabs = Root2;
@@ -3217,7 +5034,7 @@ function tractToRing(geom) {
 	return geom[0].map((pt) => [pt[1], pt[0]]);
 }
 function ScoutWorkspace() {
-	const selected = usePropertyStore((s) => s.selected);
+	usePropertyStore((s) => s.selected);
 	const selectPin = usePropertyStore((s) => s.selectPin);
 	const dossier = usePropertyStore((s) => s.dossier);
 	const dossierStatus = usePropertyStore((s) => s.dossierStatus);
@@ -3229,19 +5046,12 @@ function ScoutWorkspace() {
 	const panelTab = usePropertyStore((s) => s.panelTab);
 	const setPanelTab = usePropertyStore((s) => s.setPanelTab);
 	const geofenceMode = usePropertyStore((s) => s.geofenceMode);
-	const radius = usePropertyStore((s) => s.geofenceRadiusM);
-	const setRadius = usePropertyStore((s) => s.setGeofenceRadius);
 	const history = usePropertyStore((s) => s.history);
 	const zoneHits = usePropertyStore((s) => s.zoneHits);
-	const setZoneHits = usePropertyStore((s) => s.setZoneHits);
-	const setHarvest = usePropertyStore((s) => s.setHarvest);
-	const scanning = usePropertyStore((s) => s.scanning);
-	const setScanning = usePropertyStore((s) => s.setScanning);
-	const setGeofenceMode = usePropertyStore((s) => s.setGeofenceMode);
-	const watchlist = usePropertyStore((s) => s.watchlist);
-	const toggleWatch = usePropertyStore((s) => s.toggleWatch);
 	const setTractRing = usePropertyStore((s) => s.setTractRing);
+	const toggleWatch = usePropertyStore((s) => s.toggleWatch);
 	const setBuildingRing = usePropertyStore((s) => s.setBuildingRing);
+	const watchlist = usePropertyStore((s) => s.watchlist);
 	const [stage, setStage] = (0, import_react.useState)(0);
 	const [mapReady, setMapReady] = (0, import_react.useState)(false);
 	(0, import_react.useEffect)(() => {
@@ -3336,40 +5146,9 @@ function ScoutWorkspace() {
 		selectPin(pin);
 		runIntel(pin, zoneHits);
 	};
-	const scan = async () => {
-		if (!selected) {
-			toast.error("Drop a pin first");
-			return;
-		}
-		setGeofenceMode(true);
-		setScanning(true);
-		try {
-			const res = await scanGeofence({ data: {
-				lat: selected.lat,
-				lng: selected.lng,
-				radiusM: radius
-			} });
-			if (!res.ok) toast.error(res.error);
-			setZoneHits(res.hits);
-			const scored = scoreHarvest(res.hits);
-			setHarvest(scored);
-			if (res.hits.length === 0) toast.message("No addressed buildings in this radius — widen the fence.");
-			else {
-				toast.message(`${res.hits.length} addressed buildings · ranked by DPS`);
-				if (dossier) setDossier({
-					...dossier,
-					comps: overlayComps(selected, dossier.valuation.estimate, res.hits)
-				}, "ready");
-			}
-		} catch {
-			toast.error("Geofence scan failed");
-		} finally {
-			setScanning(false);
-		}
-	};
 	const watched = dossier ? watchlist.some((w) => w.pin.id === dossier.pin.id) : false;
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		className: "flex h-dvh min-h-0 flex-col bg-background text-foreground",
+		className: "flex h-full min-h-0 flex-col bg-background text-foreground",
 		children: [
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("header", {
 				className: "z-20 flex shrink-0 flex-col gap-3 border-b border-border px-4 py-3 md:flex-row md:items-center",
@@ -3394,38 +5173,7 @@ function ScoutWorkspace() {
 							onMapClick,
 							onZoneSelect
 						}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "h-full bg-muted" }),
-						geofenceMode && selected && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							className: "absolute left-3 right-3 top-3 z-[500] rounded-lg border border-border bg-background/85 p-3 backdrop-blur-sm lg:right-auto lg:w-80",
-							children: [
-								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-									className: "mb-2 flex items-center justify-between text-xs text-muted-foreground",
-									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "Geofence" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-										className: "tabular",
-										children: formatMiles(radius)
-									})]
-								}),
-								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Slider, {
-									min: 200,
-									max: 2400,
-									step: 50,
-									value: [radius],
-									onValueChange: (v) => setRadius(v[0] ?? 800)
-								}),
-								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-									className: "mt-3 flex items-center gap-2",
-									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
-										type: "button",
-										size: "sm",
-										onClick: () => void scan(),
-										disabled: scanning,
-										children: scanning ? "Scanning…" : "Scan zone"
-									}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-										className: "text-xs text-muted-foreground",
-										children: [zoneHits.length, " harvest"]
-									})]
-								})
-							]
-						}),
+						geofenceMode && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(GeofenceDock, { onZoneSelect }),
 						dossierStatus === "loading" && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 							className: "absolute bottom-3 left-3 right-3 z-[500] rounded-lg border border-border bg-background/85 px-3 py-2 text-xs backdrop-blur-sm",
 							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
@@ -3590,8 +5338,816 @@ function ScoutWorkspace() {
 		]
 	});
 }
+var OPEN_SOURCES = [
+	{
+		id: "nominatim",
+		name: "Nominatim geocoder",
+		agency: "OpenStreetMap",
+		layer: "Address → coordinate, reverse pin",
+		method: "HTTPS JSON, 1 req/s courtesy throttle, US country filter",
+		cadence: "Planet extract, minutes-to-hours",
+		license: "ODbL",
+		value: "Street-level parcel targeting without a Google bill. Every scout search and dropped pin.",
+		cost: "free",
+		endpoint: "nominatim.openstreetmap.org"
+	},
+	{
+		id: "overpass",
+		name: "Overpass buildings & amenities",
+		agency: "OpenStreetMap",
+		layer: "Geofence harvest, schools, parks, shops, transit",
+		method: "Around/poly Overpass QL against two interpreters with failover",
+		cadence: "Minutes",
+		license: "ODbL",
+		value: "Addressed building harvest inside a fence is the cheapest lead list a restoration crew can buy.",
+		cost: "free",
+		endpoint: "overpass-api.de / overpass.kumi.systems"
+	},
+	{
+		id: "census",
+		name: "ACS tract microdata",
+		agency: "U.S. Census Bureau",
+		layer: "Income, value, rent, tenure, year built, education",
+		method: "Census API B19013/B25077/B25064 + TIGER tract polygon",
+		cadence: "Annual ACS, TIGER yearly",
+		license: "Public domain",
+		value: "Demographic underwriting without CoStar. Tract medians reprice the AVM and scorecard.",
+		cost: "free",
+		endpoint: "api.census.gov / tigerweb.geo.census.gov"
+	},
+	{
+		id: "fema",
+		name: "NFHL flood zones",
+		agency: "FEMA",
+		layer: "SFHA, zone, BFE",
+		method: "ArcGIS MapServer query at the pin",
+		cadence: "Effective FIRM, months",
+		license: "Public",
+		value: "Insurance carry and go/no-go on coastal and Houston inventory.",
+		cost: "free",
+		endpoint: "hazards.fema.gov NFHL"
+	},
+	{
+		id: "rainviewer",
+		name: "RainViewer mosaic",
+		agency: "RainViewer / NOAA NEXRAD",
+		layer: "2-hour reflectivity loop, IR satellite",
+		method: "Public weather-maps.json + XYZ tiles, no key",
+		cadence: "2 minutes",
+		license: "Public tiles, attribution",
+		value: "Pre-storm positioning. Same picture OpenRadar paints, cheap enough to sit under every scout map.",
+		cost: "keyless",
+		endpoint: "api.rainviewer.com"
+	},
+	{
+		id: "nws",
+		name: "NWS watches & warnings",
+		agency: "NOAA / NWS",
+		layer: "Tornado, severe thunder, flash flood, tropical",
+		method: "api.weather.gov GeoJSON, User-Agent required",
+		cadence: "Seconds",
+		license: "Public domain",
+		value: "Storm-based polygons become RoofPro lead fences. Damage-threat tags drive DPS.",
+		cost: "free",
+		endpoint: "api.weather.gov/alerts"
+	},
+	{
+		id: "iem",
+		name: "IEM storm-based warnings",
+		agency: "Iowa Environmental Mesonet",
+		layer: "SBW polygons with product IDs",
+		method: "GeoJSON dump, failover if NWS is slow",
+		cadence: "Minutes",
+		license: "Public",
+		value: "Compact warning polygons when the full NWS feed is heavy.",
+		cost: "free",
+		endpoint: "mesonet.agron.iastate.edu/geojson/sbw.geojson"
+	},
+	{
+		id: "nexrad",
+		name: "WSR-88D site catalog",
+		agency: "NOAA ROC",
+		layer: "Single-site hold, beam geometry",
+		method: "Curated CONUS list (PyART/OpenRadar site table)",
+		cadence: "Static + status ping",
+		license: "Public",
+		value: "Past zoom 8 the nearest live radar is the truth source for hail MESH and velocity couplets.",
+		cost: "free",
+		endpoint: "NEXRAD Level II archive (S3 noaa-nexrad-level2)"
+	},
+	{
+		id: "usgs",
+		name: "USGS earthquakes",
+		agency: "USGS",
+		layer: "M3+ last 24h",
+		method: "GeoJSON feed",
+		cadence: "Minutes",
+		license: "Public domain",
+		value: "God's-eye environmental layer; secondary for California envelope risk.",
+		cost: "free",
+		endpoint: "earthquake.usgs.gov"
+	},
+	{
+		id: "opensky",
+		name: "OpenSky aircraft",
+		agency: "OpenSky Network",
+		layer: "Live flights in viewport",
+		method: "REST states/all with bbox, 12s cache",
+		cadence: "10 seconds",
+		license: "OpenSky (non-commercial attribution)",
+		value: "Situational globe — contractors flying storm, chase aircraft, restoration logistics.",
+		cost: "keyless",
+		endpoint: "opensky-network.org/api"
+	},
+	{
+		id: "nhc",
+		name: "NHC active storms",
+		agency: "National Hurricane Center",
+		layer: "Atlantic / East Pacific cyclones",
+		method: "CurrentStorms.json proxy",
+		cadence: "Advisory cycle",
+		license: "Public domain",
+		value: "Gulf/Atlantic restoration surge. Cone + wind radii pre-position crews 48h out.",
+		cost: "free",
+		endpoint: "nhc.noaa.gov/CurrentStorms.json"
+	},
+	{
+		id: "mapillary",
+		name: "Mapillary street imagery",
+		agency: "Meta / Mapillary",
+		layer: "Crowdsourced facades",
+		method: "Public raster tiles as coverage proxy; Graph API when keyed",
+		cadence: "Continuous",
+		license: "CC-BY-SA (community)",
+		value: "Street-level freshness beats 8-month Street View lag for peeling paint and roof color.",
+		cost: "keyless",
+		endpoint: "tiles.mapillary.com"
+	},
+	{
+		id: "esri",
+		name: "Esri World Imagery",
+		agency: "Esri / Maxar",
+		layer: "Satellite basemap",
+		method: "XYZ tiles, attribution required",
+		cadence: "Quarterly-to-annual",
+		license: "Esri terms, display OK",
+		value: "God's-eye and scout satellite without an Ion token.",
+		cost: "keyless",
+		endpoint: "server.arcgisonline.com"
+	},
+	{
+		id: "carto",
+		name: "CARTO dark streets",
+		agency: "CARTO / OSM",
+		layer: "Dark basemap",
+		method: "XYZ",
+		cadence: "Weekly",
+		license: "OSM ODbL + CARTO",
+		value: "Readable night operations map under radar.",
+		cost: "keyless",
+		endpoint: "basemaps.cartocdn.com"
+	},
+	{
+		id: "cesium",
+		name: "CesiumJS globe",
+		agency: "CesiumGS",
+		layer: "3D WGS84 globe, no Ion",
+		method: "CDN Cesium + OSM/Esri providers, ellipsoid terrain",
+		cadence: "Library release",
+		license: "Apache-2.0",
+		value: "God's-eye orbital HUD without a Google 3D-tiles bill.",
+		cost: "free",
+		endpoint: "cesium.com/downloads/cesiumjs"
+	},
+	{
+		id: "homeharvest",
+		name: "Listing delta (HomeHarvest pattern)",
+		agency: "Public brokerage portals",
+		layer: "Ask, DOM, photos, tax vs list",
+		method: "Human-confirmed portal search. Do not scrape into the system of record.",
+		cadence: "On demand",
+		license: "Portal terms — read, don't store the HTML",
+		value: "The spread between list price and the Census-anchored AVM is the bid. Confirm it in the portal, then lock the number in Underwrite.",
+		cost: "free",
+		endpoint: "realtor.com search by city"
+	},
+	{
+		id: "surfsense",
+		name: "SurfSense live-link reading room",
+		agency: "Operator RAG",
+		layer: "Cited brief over public URLs",
+		method: "Packet of live links (NWS, Census geocoder, FEMA, OSM, Mapillary, CAD) pasted into a SurfSense space",
+		cadence: "Per pin",
+		license: "Your space, their pages",
+		value: "Stops the model from inventing comps. PropertyInsight remains the system of record; SurfSense only reads what the packet names.",
+		cost: "free",
+		endpoint: "Live-link packet on this desk"
+	},
+	{
+		id: "cad",
+		name: "County appraisal district",
+		agency: "Local CAD / assessor",
+		layer: "Assessed value, owner, exemptions, land vs improvement",
+		method: "Public search portal per county. TX: Johnson, Tarrant, Dallas, Harris.",
+		cadence: "Annual roll + supplements",
+		license: "Public record",
+		value: "Assessed vs AVM is the first lie-detector. Homestead exemption flags owner-occupancy the ACS can only imply.",
+		cost: "free",
+		endpoint: "County CAD portals"
+	},
+	{
+		id: "permits",
+		name: "Municipal permits",
+		agency: "City building department",
+		layer: "Roof, electrical, mechanical pull history",
+		method: "Open data portal or clerk search by address",
+		cadence: "Daily where published",
+		license: "Public",
+		value: "A permit from year N is a roof age the seller's flyer will not admit. It reprices the envelope play.",
+		cost: "free",
+		endpoint: "City open-data / Accela / Tyler"
+	},
+	{
+		id: "osint",
+		name: "OSINT chain of title signals",
+		agency: "Public records stack",
+		layer: "Clerk filings, vacancies, environmental flags",
+		method: "County clerk, HUD USPS vacancy, EPA ECHO, OpenAddresses — lookup, never bulk-hoard PII",
+		cadence: "Varies",
+		license: "Public record / ODbL",
+		value: "Distress is a filing, not a vibe. A lis pendens or vacancy flag moves a lead from canvass to RoofPro with a reason.",
+		cost: "free",
+		endpoint: "Clerk + EPA ECHO + HUD"
+	},
+	{
+		id: "stormevents",
+		name: "NOAA Storm Events",
+		agency: "NCEI",
+		layer: "Historical hail, wind, tornado by county",
+		method: "Bulk CSV / Storm Events API, county FIPS join",
+		cadence: "Monthly, with a 60–90 day lag",
+		license: "Public domain",
+		value: "MESHcast is weather. Claim frequency is history. Five years of 1-inch hail in the county is why the insurance play exists.",
+		cost: "free",
+		endpoint: "ncdc.noaa.gov/stormevents"
+	}
+];
+function researchPacket(pin) {
+	const city = pin.city || "city";
+	const state = pin.state || "";
+	const q = encodeURIComponent(`${pin.address}, ${city}, ${state}`.replace(/\s+/g, " ").trim());
+	const cad = state === "TX" ? "https://www.johnsoncad.com/search" : `https://www.google.com/search?q=${encodeURIComponent(`${city} ${state} appraisal district property search`)}`;
+	const links = [
+		{
+			name: "NWS point forecast",
+			url: `https://forecast.weather.gov/MapClick.php?lat=${pin.lat.toFixed(4)}&lon=${pin.lng.toFixed(4)}`,
+			why: "Same-day convective risk and the hail/wind narrative you put on the estimate."
+		},
+		{
+			name: "Census geographies",
+			url: `https://geocoding.geo.census.gov/geocoder/geographies/coordinates?x=${pin.lng}&y=${pin.lat}&benchmark=Public_AR_Current&vintage=Current_Current&format=json`,
+			why: "Tract GEOID that ties this pin to ACS income, value, and tenure."
+		},
+		{
+			name: "FEMA MSC",
+			url: `https://msc.fema.gov/portal/search?AddressQuery=${q}`,
+			why: "Effective FIRM panel. SFHA changes insurance carry more than the rent bump does."
+		},
+		{
+			name: "OpenStreetMap",
+			url: `https://www.openstreetmap.org/#map=18/${pin.lat}/${pin.lng}`,
+			why: "Building footprint and amenity truth the harvest used."
+		},
+		{
+			name: "Mapillary",
+			url: `https://www.mapillary.com/app/?lat=${pin.lat}&lng=${pin.lng}&z=17`,
+			why: "Fresher facade than satellite. Check roof color, garage, and peeling paint before the truck rolls."
+		},
+		{
+			name: "Listing check",
+			url: `https://www.realtor.com/realestateandhomes-search/${encodeURIComponent(city)}_${encodeURIComponent(state || "TX")}`,
+			why: "HomeHarvest-style list-price delta. Confirm ask and days-on-market; do not ingest the page."
+		},
+		{
+			name: "County CAD",
+			url: cad,
+			why: "Assessed value, homestead, land vs improvement. The first check against the AVM."
+		},
+		{
+			name: "EPA ECHO",
+			url: `https://echo.epa.gov/detailed-facility-report?redirect=page&fid_search=${q}`,
+			why: "Nearby regulated facilities. A flag here belongs in the risk line, not the brochure."
+		}
+	];
+	const markdown = [
+		`# ${pin.address}`,
+		`${city}, ${state} · ${pin.lat.toFixed(5)}, ${pin.lng.toFixed(5)}`,
+		"",
+		"Live-link packet for a SurfSense space. Cite these pages. Do not invent comps.",
+		"",
+		...links.map((l) => `- [${l.name}](${l.url}) — ${l.why}`)
+	].join("\n");
+	return {
+		title: `Live-link packet · ${pin.address}`,
+		links,
+		markdown
+	};
+}
+var LANES = [
+	"All",
+	"Storm",
+	"Parcel",
+	"Imagery",
+	"Reading"
+];
+function laneOf(s) {
+	if ([
+		"rainviewer",
+		"nws",
+		"iem",
+		"nexrad",
+		"nhc",
+		"stormevents"
+	].includes(s.id)) return "Storm";
+	if ([
+		"nominatim",
+		"overpass",
+		"census",
+		"fema",
+		"homeharvest",
+		"cad",
+		"permits",
+		"osint"
+	].includes(s.id)) return "Parcel";
+	if ([
+		"mapillary",
+		"esri",
+		"carto"
+	].includes(s.id)) return "Imagery";
+	if ([
+		"surfsense",
+		"usgs",
+		"opensky",
+		"cesium"
+	].includes(s.id)) return "Reading";
+	return "All";
+}
+function SourcesWorkspace() {
+	const pin = usePropertyStore((s) => s.selected);
+	const [lane, setLane] = (0, import_react.useState)("All");
+	const [openId, setOpenId] = (0, import_react.useState)("surfsense");
+	const packet = (0, import_react.useMemo)(() => researchPacket(pin ?? {
+		address: "412 Willow Park Dr",
+		city: "Burleson",
+		state: "TX",
+		lat: 32.542,
+		lng: -97.3208
+	}), [pin]);
+	const rows = OPEN_SOURCES.filter((s) => lane === "All" || laneOf(s) === lane);
+	const copy = async () => {
+		try {
+			await navigator.clipboard.writeText(packet.markdown);
+			toast.message("Packet copied. Paste it into a SurfSense space as live links.");
+		} catch {
+			toast.error("Clipboard blocked — select the brief and copy it yourself.");
+		}
+	};
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "flex h-full min-h-0 flex-col",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("header", {
+				className: "shrink-0 border-b border-border px-4 py-3",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
+					className: "font-display text-2xl",
+					children: "Open sources"
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "mt-1 max-w-3xl text-sm text-muted-foreground",
+					children: "Every layer here is public. The product question is not “can we fetch it” — it is which decision the number changes. Cheap layers that move a bid stay. Pretty layers that do not, do not."
+				})]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
+				className: "shrink-0 border-b border-border px-4 py-3",
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "flex flex-wrap items-center justify-between gap-2",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+							className: "text-xs uppercase tracking-wider text-muted-foreground",
+							children: "SurfSense live-link packet"
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+							className: "text-sm",
+							children: packet.title
+						})] }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+							type: "button",
+							size: "sm",
+							onClick: () => void copy(),
+							children: "Copy packet"
+						})]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
+						className: "mt-3 grid gap-2 md:grid-cols-2",
+						children: packet.links.map((l) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
+							className: "rounded-md border border-border px-3 py-2",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("a", {
+								href: l.url,
+								target: "_blank",
+								rel: "noreferrer",
+								className: "text-sm text-primary underline-offset-2 hover:underline",
+								children: l.name
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+								className: "text-xs text-muted-foreground",
+								children: l.why
+							})]
+						}, l.name))
+					}),
+					!pin && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+						className: "mt-2 text-xs text-muted-foreground",
+						children: "No scout pin yet — packet is parked on a Burleson example. Search an address on Scout and come back."
+					})
+				]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				className: "flex shrink-0 gap-1 overflow-x-auto border-b border-border px-3 py-2",
+				children: LANES.map((l) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+					type: "button",
+					onClick: () => setLane(l),
+					className: `h-9 shrink-0 rounded-md border px-3 text-xs uppercase tracking-wider ${lane === l ? "border-primary text-foreground" : "border-transparent text-muted-foreground"}`,
+					children: l
+				}, l))
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
+				className: "min-h-0 flex-1 overflow-y-auto",
+				children: rows.map((s) => {
+					const open = openId === s.id;
+					return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
+						className: "border-b border-border",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+							type: "button",
+							className: "flex w-full items-baseline justify-between gap-3 px-4 py-3 text-left hover:bg-accent",
+							onClick: () => setOpenId(open ? null : s.id),
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+								className: "text-sm",
+								children: s.name
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+								className: "mt-0.5 block text-xs text-muted-foreground",
+								children: [
+									s.agency,
+									" · ",
+									s.cost,
+									" · ",
+									s.cadence
+								]
+							})] }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+								className: "shrink-0 text-xs uppercase tracking-wider text-muted-foreground",
+								children: s.layer
+							})]
+						}), open && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "space-y-2 px-4 pb-4 text-sm",
+							children: [
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: s.value }),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+									className: "text-muted-foreground",
+									children: ["Method: ", s.method]
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+									className: "font-mono text-xs text-muted-foreground",
+									children: [
+										s.endpoint,
+										" · ",
+										s.license
+									]
+								})
+							]
+						})]
+					}, s.id);
+				})
+			})
+		]
+	});
+}
+var readDocument = createServerFn({ method: "POST" }).validator((input) => ({
+	imageDataUrl: string().min(32).max(65e5).parse(input.imageDataUrl),
+	hint: input.hint ? string().max(240).parse(input.hint) : void 0
+})).handler(createSsrRpc("4408cc41f53107a4e6007eaa58cf68e0df16ab25444040edafaa9a2575a52758"));
+async function shrink(file) {
+	const bmp = await createImageBitmap(file);
+	const scale = Math.min(1, 1280 / Math.max(bmp.width, bmp.height));
+	const canvas = document.createElement("canvas");
+	canvas.width = Math.max(1, Math.round(bmp.width * scale));
+	canvas.height = Math.max(1, Math.round(bmp.height * scale));
+	const ctx = canvas.getContext("2d");
+	if (!ctx) throw new Error("Canvas unavailable");
+	ctx.drawImage(bmp, 0, 0, canvas.width, canvas.height);
+	return canvas.toDataURL("image/jpeg", .72);
+}
+function VisionWorkspace({ onOpenJobs }) {
+	const pin = usePropertyStore((s) => s.selected);
+	const dossier = usePropertyStore((s) => s.dossier);
+	const addLead = useRoofproStore((s) => s.addLead);
+	const alert = useWeatherStore((s) => s.alerts.find((a) => a.id === s.selectedAlertId));
+	const [hint, setHint] = (0, import_react.useState)("");
+	const [preview, setPreview] = (0, import_react.useState)(null);
+	const [busy, setBusy] = (0, import_react.useState)(false);
+	const [error, setError] = (0, import_react.useState)(null);
+	const [read, setRead] = (0, import_react.useState)(null);
+	const onFile = async (file) => {
+		if (!file) return;
+		setError(null);
+		setRead(null);
+		setBusy(true);
+		try {
+			const dataUrl = await shrink(file);
+			setPreview(dataUrl);
+			const res = await readDocument({ data: {
+				imageDataUrl: dataUrl,
+				hint: hint || void 0
+			} });
+			if (!res.ok) {
+				setError(res.error);
+				return;
+			}
+			setRead({
+				kind: res.kind,
+				docType: res.docType,
+				address: res.address,
+				summary: res.summary,
+				text: res.text,
+				damage: res.damage ?? [],
+				conditionScore: res.conditionScore,
+				suggestedPlay: res.suggestedPlay
+			});
+		} catch (e) {
+			setError(e instanceof Error ? e.message : "Could not read that image");
+		} finally {
+			setBusy(false);
+		}
+	};
+	const pushLead = () => {
+		const address = read?.address || pin?.address || "Field photo";
+		const dps = dossier?.dps.score ?? (read?.conditionScore != null ? Math.max(0, 100 - read.conditionScore) : 0);
+		addLead({
+			name: address,
+			address,
+			city: pin?.city ?? "",
+			state: pin?.state ?? "",
+			source: "Vision",
+			status: "inspection",
+			dps,
+			storm: alert?.event ?? null,
+			notes: [
+				read?.summary,
+				read?.suggestedPlay,
+				hint
+			].filter(Boolean).join(" ")
+		});
+		toast.message("Lead opened on the jobs desk");
+		onOpenJobs();
+	};
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "grid h-full min-h-0 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]",
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
+			className: "flex min-h-0 flex-col gap-3 overflow-y-auto border-b border-border p-4 lg:border-b-0 lg:border-r",
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
+					className: "font-display text-2xl",
+					children: "Vision"
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "mt-1 text-sm text-muted-foreground",
+					children: "Upload a facade, roof, or estimate. The reader extracts damage and a suggested play. If vision is offline, the photo still becomes a RoofPro lead with your note."
+				})] }),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Textarea, {
+					value: hint,
+					onChange: (e) => setHint(e.target.value),
+					placeholder: "Operator hint — hail date, carrier, what to look for",
+					rows: 3
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", {
+					className: "flex h-12 cursor-pointer items-center justify-center rounded-md border border-dashed border-border text-sm text-muted-foreground hover:bg-accent",
+					children: [busy ? "Reading…" : "Choose a photo or PDF page image", /* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+						type: "file",
+						accept: "image/*",
+						className: "sr-only",
+						disabled: busy,
+						onChange: (e) => void onFile(e.target.files?.[0])
+					})]
+				}),
+				preview && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
+					src: preview,
+					alt: "Upload preview",
+					className: "max-h-80 w-full rounded-lg border border-border object-contain"
+				}),
+				pin && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+					className: "text-xs text-muted-foreground",
+					children: [
+						"Tied to scout pin ",
+						pin.address,
+						dossier ? ` · DPS ${dossier.dps.score}` : ""
+					]
+				})
+			]
+		}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
+			className: "min-h-0 overflow-y-auto p-4",
+			children: [
+				!read && !error && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "text-sm text-muted-foreground",
+					children: "Nothing read yet. A useful upload is the front elevation, a close roof slope, or the first page of an insurance estimate."
+				}),
+				error && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "rounded-lg border border-border p-3",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+							className: "text-sm text-destructive",
+							children: error
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+							className: "mt-2 text-sm text-muted-foreground",
+							children: "You can still open a lead. Put the damage in the hint so the crew is not guessing."
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+							type: "button",
+							className: "mt-3",
+							onClick: pushLead,
+							disabled: !preview && !pin,
+							children: "Open lead anyway"
+						})
+					]
+				}),
+				read && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "space-y-3",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+								className: "text-xs uppercase tracking-wider text-muted-foreground",
+								children: [
+									read.kind,
+									" · ",
+									read.docType,
+									read.conditionScore != null ? ` · condition ${Math.round(read.conditionScore)}` : ""
+								]
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
+								className: "mt-1 font-display text-xl",
+								children: read.address || "No address on the image"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+								className: "mt-2 text-sm",
+								children: read.summary
+							}),
+							read.suggestedPlay && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+								className: "mt-2 text-sm text-primary",
+								children: read.suggestedPlay
+							})
+						] }),
+						read.damage.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
+							className: "space-y-2",
+							children: read.damage.map((d, i) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
+								className: "rounded-md border border-border px-3 py-2 text-sm",
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+									className: "uppercase tracking-wider text-muted-foreground",
+									children: d.severity || "note"
+								}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", { children: [
+									d.feature || "Feature",
+									" — ",
+									d.note || ""
+								] })]
+							}, i))
+						}),
+						read.text && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("pre", {
+							className: "max-h-48 overflow-auto whitespace-pre-wrap rounded-md border border-border p-3 font-mono text-xs text-muted-foreground",
+							children: read.text
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+							type: "button",
+							onClick: pushLead,
+							children: "Open RoofPro lead"
+						})
+					]
+				})
+			]
+		})]
+	});
+}
+function useWeatherBootstrap() {
+	const setCatalog = useWeatherStore((s) => s.setCatalog);
+	const setAlerts = useWeatherStore((s) => s.setAlerts);
+	const setCatalogStatus = useWeatherStore((s) => s.setCatalogStatus);
+	const setAlertsStatus = useWeatherStore((s) => s.setAlertsStatus);
+	const playing = useWeatherStore((s) => s.playing);
+	const frames = useWeatherStore((s) => s.frames);
+	const step = useWeatherStore((s) => s.step);
+	(0, import_react.useEffect)(() => {
+		let cancelled = false;
+		(async () => {
+			setCatalogStatus("loading");
+			setAlertsStatus("loading");
+			try {
+				const cat = await fetchRadarCatalog();
+				if (cancelled) return;
+				if (cat.ok) setCatalog(cat.host, cat.frames, cat.infrared);
+				else setCatalogStatus("error");
+			} catch {
+				if (!cancelled) setCatalogStatus("error");
+			}
+			try {
+				const al = await fetchStormAlerts();
+				if (cancelled) return;
+				if (al.ok) setAlerts(al.alerts, al.source);
+				else setAlertsStatus("error");
+			} catch {
+				if (!cancelled) setAlertsStatus("error");
+			}
+		})();
+		return () => {
+			cancelled = true;
+		};
+	}, [
+		setAlerts,
+		setAlertsStatus,
+		setCatalog,
+		setCatalogStatus
+	]);
+	(0, import_react.useEffect)(() => {
+		if (!playing || frames.length === 0) return;
+		const t = window.setInterval(() => step(1), 750);
+		return () => window.clearInterval(t);
+	}, [
+		playing,
+		frames.length,
+		step
+	]);
+}
+var DESKS = [
+	{
+		id: "scout",
+		label: "Scout",
+		icon: Binoculars
+	},
+	{
+		id: "radar",
+		label: "Radar",
+		icon: Radar
+	},
+	{
+		id: "globe",
+		label: "Globe",
+		icon: Earth
+	},
+	{
+		id: "jobs",
+		label: "Jobs",
+		icon: Briefcase
+	},
+	{
+		id: "vision",
+		label: "Vision",
+		icon: ScanLine
+	},
+	{
+		id: "sources",
+		label: "Sources",
+		icon: Crosshair
+	}
+];
+function CommandShell() {
+	useWeatherBootstrap();
+	const [desk, setDesk] = (0, import_react.useState)("scout");
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "flex h-dvh min-h-0 flex-col bg-background text-foreground",
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("nav", {
+			className: "z-30 flex shrink-0 items-center gap-2 overflow-x-auto border-b border-border px-3 py-2",
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "hidden shrink-0 font-display text-sm tracking-tight sm:block",
+				children: "Command"
+			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				className: "flex min-w-0 gap-1",
+				children: DESKS.map((d) => {
+					const Icon = d.icon;
+					const on = desk === d.id;
+					return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+						type: "button",
+						onClick: () => setDesk(d.id),
+						className: cn("flex h-10 shrink-0 items-center gap-1.5 rounded-md border px-3 text-xs uppercase tracking-wider", on ? "border-primary bg-secondary text-foreground" : "border-transparent text-muted-foreground hover:border-border hover:text-foreground"),
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Icon, {
+							className: "size-3.5",
+							strokeWidth: 1.6
+						}), d.label]
+					}, d.id);
+				})
+			})]
+		}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+			className: "min-h-0 flex-1",
+			children: [
+				desk === "scout" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ScoutWorkspace, {}),
+				desk === "radar" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(RadarWorkspace, { onOpenScout: () => setDesk("scout") }),
+				desk === "globe" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(GlobeWorkspace, {}),
+				desk === "jobs" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(RoofproWorkspace, {}),
+				desk === "vision" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(VisionWorkspace, { onOpenJobs: () => setDesk("jobs") }),
+				desk === "sources" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SourcesWorkspace, {})
+			]
+		})]
+	});
+}
 function Home() {
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ScoutWorkspace, {});
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CommandShell, {});
 }
 //#endregion
 export { Home as component };

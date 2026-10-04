@@ -192,4 +192,149 @@ export const OPEN_SOURCES: DataSource[] = [
     cost: "free",
     endpoint: "cesium.com/downloads/cesiumjs",
   },
+  {
+    id: "homeharvest",
+    name: "Listing delta (HomeHarvest pattern)",
+    agency: "Public brokerage portals",
+    layer: "Ask, DOM, photos, tax vs list",
+    method: "Human-confirmed portal search. Do not scrape into the system of record.",
+    cadence: "On demand",
+    license: "Portal terms — read, don't store the HTML",
+    value: "The spread between list price and the Census-anchored AVM is the bid. Confirm it in the portal, then lock the number in Underwrite.",
+    cost: "free",
+    endpoint: "realtor.com search by city",
+  },
+  {
+    id: "surfsense",
+    name: "SurfSense live-link reading room",
+    agency: "Operator RAG",
+    layer: "Cited brief over public URLs",
+    method: "Packet of live links (NWS, Census geocoder, FEMA, OSM, Mapillary, CAD) pasted into a SurfSense space",
+    cadence: "Per pin",
+    license: "Your space, their pages",
+    value: "Stops the model from inventing comps. PropertyInsight remains the system of record; SurfSense only reads what the packet names.",
+    cost: "free",
+    endpoint: "Live-link packet on this desk",
+  },
+  {
+    id: "cad",
+    name: "County appraisal district",
+    agency: "Local CAD / assessor",
+    layer: "Assessed value, owner, exemptions, land vs improvement",
+    method: "Public search portal per county. TX: Johnson, Tarrant, Dallas, Harris.",
+    cadence: "Annual roll + supplements",
+    license: "Public record",
+    value: "Assessed vs AVM is the first lie-detector. Homestead exemption flags owner-occupancy the ACS can only imply.",
+    cost: "free",
+    endpoint: "County CAD portals",
+  },
+  {
+    id: "permits",
+    name: "Municipal permits",
+    agency: "City building department",
+    layer: "Roof, electrical, mechanical pull history",
+    method: "Open data portal or clerk search by address",
+    cadence: "Daily where published",
+    license: "Public",
+    value: "A permit from year N is a roof age the seller's flyer will not admit. It reprices the envelope play.",
+    cost: "free",
+    endpoint: "City open-data / Accela / Tyler",
+  },
+  {
+    id: "osint",
+    name: "OSINT chain of title signals",
+    agency: "Public records stack",
+    layer: "Clerk filings, vacancies, environmental flags",
+    method: "County clerk, HUD USPS vacancy, EPA ECHO, OpenAddresses — lookup, never bulk-hoard PII",
+    cadence: "Varies",
+    license: "Public record / ODbL",
+    value: "Distress is a filing, not a vibe. A lis pendens or vacancy flag moves a lead from canvass to RoofPro with a reason.",
+    cost: "free",
+    endpoint: "Clerk + EPA ECHO + HUD",
+  },
+  {
+    id: "stormevents",
+    name: "NOAA Storm Events",
+    agency: "NCEI",
+    layer: "Historical hail, wind, tornado by county",
+    method: "Bulk CSV / Storm Events API, county FIPS join",
+    cadence: "Monthly, with a 60–90 day lag",
+    license: "Public domain",
+    value: "MESHcast is weather. Claim frequency is history. Five years of 1-inch hail in the county is why the insurance play exists.",
+    cost: "free",
+    endpoint: "ncdc.noaa.gov/stormevents",
+  },
 ];
+
+export type ResearchLink = {
+  name: string;
+  url: string;
+  why: string;
+};
+
+export function researchPacket(pin: {
+  address: string;
+  city: string;
+  state: string;
+  lat: number;
+  lng: number;
+}): { title: string; links: ResearchLink[]; markdown: string } {
+  const city = pin.city || "city";
+  const state = pin.state || "";
+  const q = encodeURIComponent(`${pin.address}, ${city}, ${state}`.replace(/\s+/g, " ").trim());
+  const cad =
+    state === "TX"
+      ? "https://www.johnsoncad.com/search"
+      : `https://www.google.com/search?q=${encodeURIComponent(`${city} ${state} appraisal district property search`)}`;
+  const links: ResearchLink[] = [
+    {
+      name: "NWS point forecast",
+      url: `https://forecast.weather.gov/MapClick.php?lat=${pin.lat.toFixed(4)}&lon=${pin.lng.toFixed(4)}`,
+      why: "Same-day convective risk and the hail/wind narrative you put on the estimate.",
+    },
+    {
+      name: "Census geographies",
+      url: `https://geocoding.geo.census.gov/geocoder/geographies/coordinates?x=${pin.lng}&y=${pin.lat}&benchmark=Public_AR_Current&vintage=Current_Current&format=json`,
+      why: "Tract GEOID that ties this pin to ACS income, value, and tenure.",
+    },
+    {
+      name: "FEMA MSC",
+      url: `https://msc.fema.gov/portal/search?AddressQuery=${q}`,
+      why: "Effective FIRM panel. SFHA changes insurance carry more than the rent bump does.",
+    },
+    {
+      name: "OpenStreetMap",
+      url: `https://www.openstreetmap.org/#map=18/${pin.lat}/${pin.lng}`,
+      why: "Building footprint and amenity truth the harvest used.",
+    },
+    {
+      name: "Mapillary",
+      url: `https://www.mapillary.com/app/?lat=${pin.lat}&lng=${pin.lng}&z=17`,
+      why: "Fresher facade than satellite. Check roof color, garage, and peeling paint before the truck rolls.",
+    },
+    {
+      name: "Listing check",
+      url: `https://www.realtor.com/realestateandhomes-search/${encodeURIComponent(city)}_${encodeURIComponent(state || "TX")}`,
+      why: "HomeHarvest-style list-price delta. Confirm ask and days-on-market; do not ingest the page.",
+    },
+    {
+      name: "County CAD",
+      url: cad,
+      why: "Assessed value, homestead, land vs improvement. The first check against the AVM.",
+    },
+    {
+      name: "EPA ECHO",
+      url: `https://echo.epa.gov/detailed-facility-report?redirect=page&fid_search=${q}`,
+      why: "Nearby regulated facilities. A flag here belongs in the risk line, not the brochure.",
+    },
+  ];
+  const markdown = [
+    `# ${pin.address}`,
+    `${city}, ${state} · ${pin.lat.toFixed(5)}, ${pin.lng.toFixed(5)}`,
+    "",
+    "Live-link packet for a SurfSense space. Cite these pages. Do not invent comps.",
+    "",
+    ...links.map((l) => `- [${l.name}](${l.url}) — ${l.why}`),
+  ].join("\n");
+  return { title: `Live-link packet · ${pin.address}`, links, markdown };
+}

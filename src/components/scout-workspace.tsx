@@ -10,16 +10,16 @@ import { ScorecardPanel } from "@/components/scorecard-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Slider } from "@/components/ui/slider";
+import { GeofenceDock } from "@/components/geofence-dock";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UnderwritePanel } from "@/components/underwrite-panel";
-import { overlayComps, buildDossier, scoreHarvest, watchFromDossier } from "@/lib/engine";
+import { overlayComps, buildDossier, watchFromDossier } from "@/lib/engine";
 import { usePropertyStore } from "@/lib/property-store";
 import { analyzeNeighborhood, analyzeProperty } from "@/lib/server/analyze";
 import { fetchGroundTruth } from "@/lib/server/census";
-import { fetchAmenities, reverseGeocode, scanGeofence } from "@/lib/server/geo";
+import { fetchAmenities, reverseGeocode } from "@/lib/server/geo";
 import type { GeocodeHit, GroundTruth, PanelTab, PropertyPin } from "@/lib/types";
-import { compactUsd, formatMiles } from "@/lib/utils";
+import { compactUsd } from "@/lib/utils";
 
 const STAGES = [
   "Geocoding parcel",
@@ -48,19 +48,12 @@ export function ScoutWorkspace() {
   const panelTab = usePropertyStore((s) => s.panelTab);
   const setPanelTab = usePropertyStore((s) => s.setPanelTab);
   const geofenceMode = usePropertyStore((s) => s.geofenceMode);
-  const radius = usePropertyStore((s) => s.geofenceRadiusM);
-  const setRadius = usePropertyStore((s) => s.setGeofenceRadius);
   const history = usePropertyStore((s) => s.history);
   const zoneHits = usePropertyStore((s) => s.zoneHits);
-  const setZoneHits = usePropertyStore((s) => s.setZoneHits);
-  const setHarvest = usePropertyStore((s) => s.setHarvest);
-  const scanning = usePropertyStore((s) => s.scanning);
-  const setScanning = usePropertyStore((s) => s.setScanning);
-  const setGeofenceMode = usePropertyStore((s) => s.setGeofenceMode);
-  const watchlist = usePropertyStore((s) => s.watchlist);
-  const toggleWatch = usePropertyStore((s) => s.toggleWatch);
   const setTractRing = usePropertyStore((s) => s.setTractRing);
+  const toggleWatch = usePropertyStore((s) => s.toggleWatch);
   const setBuildingRing = usePropertyStore((s) => s.setBuildingRing);
+  const watchlist = usePropertyStore((s) => s.watchlist);
 
   const [stage, setStage] = useState(0);
   const [mapReady, setMapReady] = useState(false);
@@ -146,39 +139,10 @@ export function ScoutWorkspace() {
     void runIntel(pin, zoneHits);
   };
 
-  const scan = async () => {
-    if (!selected) {
-      toast.error("Drop a pin first");
-      return;
-    }
-    setGeofenceMode(true);
-    setScanning(true);
-    try {
-      const res = await scanGeofence({
-        data: { lat: selected.lat, lng: selected.lng, radiusM: radius },
-      });
-      if (!res.ok) toast.error(res.error);
-      setZoneHits(res.hits);
-      const scored = scoreHarvest(res.hits);
-      setHarvest(scored);
-      if (res.hits.length === 0) toast.message("No addressed buildings in this radius — widen the fence.");
-      else {
-        toast.message(`${res.hits.length} addressed buildings · ranked by DPS`);
-        if (dossier) {
-          setDossier({ ...dossier, comps: overlayComps(selected, dossier.valuation.estimate, res.hits) }, "ready");
-        }
-      }
-    } catch {
-      toast.error("Geofence scan failed");
-    } finally {
-      setScanning(false);
-    }
-  };
-
   const watched = dossier ? watchlist.some((w) => w.pin.id === dossier.pin.id) : false;
 
   return (
-    <div className="flex h-dvh min-h-0 flex-col bg-background text-foreground">
+    <div className="flex h-full min-h-0 flex-col bg-background text-foreground">
       <header className="z-20 flex shrink-0 flex-col gap-3 border-b border-border px-4 py-3 md:flex-row md:items-center">
         <BrandMark />
         <div className="min-w-0 flex-1">
@@ -196,21 +160,7 @@ export function ScoutWorkspace() {
           ) : (
             <div className="h-full bg-muted" />
           )}
-          {geofenceMode && selected && (
-            <div className="absolute left-3 right-3 top-3 z-[500] rounded-lg border border-border bg-background/85 p-3 backdrop-blur-sm lg:right-auto lg:w-80">
-              <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
-                <span>Geofence</span>
-                <span className="tabular">{formatMiles(radius)}</span>
-              </div>
-              <Slider min={200} max={2400} step={50} value={[radius]} onValueChange={(v) => setRadius(v[0] ?? 800)} />
-              <div className="mt-3 flex items-center gap-2">
-                <Button type="button" size="sm" onClick={() => void scan()} disabled={scanning}>
-                  {scanning ? "Scanning…" : "Scan zone"}
-                </Button>
-                <span className="text-xs text-muted-foreground">{zoneHits.length} harvest</span>
-              </div>
-            </div>
-          )}
+          {geofenceMode && <GeofenceDock onZoneSelect={onZoneSelect} />}
           {dossierStatus === "loading" && (
             <div className="absolute bottom-3 left-3 right-3 z-[500] rounded-lg border border-border bg-background/85 px-3 py-2 text-xs backdrop-blur-sm">
               <p className="text-primary">{STAGES[Math.min(stage, STAGES.length - 1)]}</p>

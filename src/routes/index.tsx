@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ScoutWorkspace } from "@/components/scout-workspace";
+import { CommandShell } from "@/components/command-shell";
 
 export const Route = createFileRoute("/")({ component: Home });
 
 function Home() {
-  return <ScoutWorkspace />;
+  return <CommandShell />;
 }

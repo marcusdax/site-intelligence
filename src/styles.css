@@ -145,6 +145,15 @@
   box-shadow: 0 0 0 3px rgb(196 180 154 / 25%);
 }
 
+.pi-vertex {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #8aa07a;
+  border: 1px solid #eceae4;
+  box-shadow: 0 0 0 3px rgb(138 160 122 / 35%);
+}
+
 @media print {
   header,
   footer,

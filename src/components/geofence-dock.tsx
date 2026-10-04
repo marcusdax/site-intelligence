@@ -32,8 +32,15 @@ export function GeofenceDock({
   const mapCenter = usePropertyStore((s) => s.mapCenter);
   const selectedAlertId = useWeatherStore((s) => s.selectedAlertId);
   const alerts = useWeatherStore((s) => s.alerts);
-  const setVertices = usePropertyStore((s) => s.clearGeofenceVertices);
   const addVertex = usePropertyStore((s) => s.addGeofenceVertex);
+
+  function simplifyRing(ring: [number, number][], n: number) {
+    if (ring.length <= n) return ring;
+    const step = (ring.length - 1) / (n - 1);
+    const out: [number, number][] = [];
+    for (let i = 0; i < n; i++) out.push(ring[Math.round(i * step)]!);
+    return out;
+  }
 
   const scan = async () => {
     const origin = selected ?? {
@@ -68,15 +75,19 @@ export function GeofenceDock({
     }
   };
 
+  const setGeofenceMode = usePropertyStore((s) => s.setGeofenceMode);
+
   const useAlert = () => {
     const a = alerts.find((x) => x.id === selectedAlertId);
     if (!a?.ring || a.ring.length < 3) {
       toast.error("Select a warning that has a polygon");
       return;
     }
-    setVertices();
-    a.ring.slice(0, 22).forEach((v) => addVertex(v));
+    const ring = simplifyRing(a.ring, 18);
+    clearVerts();
+    ring.forEach((v) => addVertex(v));
     setShape("polygon");
+    setGeofenceMode(true);
     toast.message(`Fence copied from ${a.event}`);
   };
 

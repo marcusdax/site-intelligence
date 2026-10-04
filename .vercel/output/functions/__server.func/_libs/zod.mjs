@@ -2236,6 +2236,104 @@ function handleIntersectionResults(result, left, right) {
 	result.value = merged.data;
 	return result;
 }
+var $ZodTuple = /*@__PURE__*/ $constructor("$ZodTuple", (inst, def) => {
+	$ZodType.init(inst, def);
+	const items = def.items;
+	const memo = globalConfig.memoizer;
+	memo?.attach(inst);
+	inst._zod.parse = (payload, ctx) => {
+		const input = payload.value;
+		if (!Array.isArray(input)) {
+			payload.issues.push({
+				input,
+				inst,
+				expected: "tuple",
+				code: "invalid_type"
+			});
+			return payload;
+		}
+		payload.value = memo ? memo.alloc(inst, payload, [], ctx) : [];
+		const proms = [];
+		const optinStart = getTupleOptStart(items, "optin");
+		const optoutStart = getTupleOptStart(items, "optout");
+		if (!def.rest) {
+			if (input.length < optinStart) {
+				payload.issues.push({
+					code: "too_small",
+					minimum: optinStart,
+					inclusive: true,
+					input,
+					inst,
+					origin: "array"
+				});
+				return payload;
+			}
+			if (input.length > items.length) payload.issues.push({
+				code: "too_big",
+				maximum: items.length,
+				inclusive: true,
+				input,
+				inst,
+				origin: "array"
+			});
+		}
+		const itemResults = new Array(items.length);
+		for (let i = 0; i < items.length; i++) {
+			const r = items[i]._zod.run({
+				value: input[i],
+				issues: []
+			}, ctx);
+			if (r instanceof Promise) proms.push(r.then((rr) => {
+				itemResults[i] = rr;
+			}));
+			else itemResults[i] = r;
+		}
+		if (def.rest) {
+			let i = items.length - 1;
+			const rest = input.slice(items.length);
+			for (const el of rest) {
+				i++;
+				const result = def.rest._zod.run({
+					value: el,
+					issues: []
+				}, ctx);
+				if (result instanceof Promise) proms.push(result.then((r) => handleTupleResult(r, payload, i)));
+				else handleTupleResult(result, payload, i);
+			}
+		}
+		if (proms.length) return Promise.all(proms).then(() => handleTupleResults(itemResults, payload, items, input, optoutStart));
+		return handleTupleResults(itemResults, payload, items, input, optoutStart);
+	};
+});
+function getTupleOptStart(items, key) {
+	for (let i = items.length - 1; i >= 0; i--) if (!(key === "optin" ? items[i]._zod.optin !== void 0 : items[i]._zod.optout === "optional")) return i + 1;
+	return 0;
+}
+function handleTupleResult(result, final, index) {
+	if (result.issues.length) final.issues.push(...prefixIssues(index, result.issues));
+	final.value[index] = result.value;
+}
+function handleTupleResults(itemResults, final, items, input, optoutStart) {
+	for (let i = 0; i < items.length; i++) {
+		const r = itemResults[i];
+		const isPresent = i < input.length;
+		if (!isPresent && i >= optoutStart && items[i]._zod.optin === "optional") {
+			final.value.length = i;
+			break;
+		}
+		if (r.issues.length) {
+			if (!isPresent && i >= optoutStart) {
+				final.value.length = i;
+				break;
+			}
+			final.issues.push(...prefixIssues(i, r.issues));
+		}
+		final.value[i] = r.value;
+	}
+	for (let i = final.value.length - 1; i >= input.length; i--) if (items[i]._zod.optout === "optional" && final.value[i] === void 0) final.value.length = i;
+	else break;
+	return final;
+}
 var $ZodEnum = /*@__PURE__*/ $constructor("$ZodEnum", (inst, def) => {
 	$ZodType.init(inst, def);
 	const values = getEnumValues(def.entries);
@@ -4000,6 +4098,58 @@ var intersectionProcessor = (schema, ctx, json, params) => {
 	json.allOf = allOf;
 	ctx.intersections.push(allOf);
 };
+var tupleProcessor = (schema, ctx, _json, params) => {
+	const json = _json;
+	const def = schema._zod.def;
+	json.type = "array";
+	const prefixPath = ctx.target === "draft-2020-12" ? "prefixItems" : "items";
+	const restPath = ctx.target === "draft-2020-12" ? "items" : ctx.target === "openapi-3.0" ? "items" : "additionalItems";
+	const prefixItems = def.items.map((x, i) => process(x, ctx, {
+		...params,
+		path: [
+			...params.path,
+			prefixPath,
+			i
+		]
+	}));
+	const rest = def.rest ? process(def.rest, ctx, {
+		...params,
+		path: [
+			...params.path,
+			restPath,
+			...ctx.target === "openapi-3.0" ? [def.items.length] : []
+		]
+	}) : null;
+	let minItems = def.items.length;
+	while (minItems > 0) {
+		const item = def.items[minItems - 1];
+		if (!(ctx.io === "input" ? inputOptin(item) !== void 0 : item._zod.optout === "optional")) break;
+		minItems--;
+	}
+	const maxItems = def.items.length;
+	const isClosed = !def.rest;
+	if (ctx.target === "draft-2020-12") {
+		json.prefixItems = prefixItems;
+		if (isClosed) json.items = false;
+		else if (rest) json.items = rest;
+		if (minItems > 0) json.minItems = minItems;
+		if (isClosed) json.maxItems = maxItems;
+	} else if (ctx.target === "openapi-3.0") {
+		json.items = { anyOf: prefixItems };
+		if (rest) json.items.anyOf.push(rest);
+		if (minItems > 0) json.minItems = minItems;
+		if (isClosed) json.maxItems = maxItems;
+	} else {
+		json.items = prefixItems;
+		if (isClosed) json.additionalItems = false;
+		else if (rest) json.additionalItems = rest;
+		if (minItems > 0) json.minItems = minItems;
+		if (isClosed) json.maxItems = maxItems;
+	}
+	const { minimum, maximum } = schema._zod.bag;
+	if (typeof minimum === "number") json.minItems = minimum;
+	if (typeof maximum === "number") json.maxItems = maximum;
+};
 var nullableProcessor = (schema, ctx, json, params) => {
 	const def = schema._zod.def;
 	const inner = process(def.innerType, ctx, params);
@@ -4774,6 +4924,39 @@ function intersection(left, right) {
 		right
 	});
 }
+var ZodTuple = /*@__PURE__*/ $constructor("ZodTuple", (inst, def) => {
+	_ensureDefaultMemoizer();
+	$ZodTuple.init(inst, def);
+	ZodType.init(inst, def);
+	inst._zod.processJSONSchema = (ctx, json, params) => tupleProcessor(inst, ctx, json, params);
+}, {
+	rest(rest) {
+		return this.clone({
+			...this._zod.def,
+			rest
+		});
+	},
+	partial() {
+		const def = this._zod.def;
+		if (def.checks?.length) throw new Error(".partial() cannot be used on tuple schemas containing refinements");
+		return this.clone({
+			...def,
+			items: def.items.map((item) => new ZodOptional({
+				type: "optional",
+				innerType: item
+			}))
+		});
+	}
+});
+function tuple(items, _paramsOrRest, _params) {
+	const hasRest = _paramsOrRest instanceof $ZodType;
+	return new ZodTuple({
+		type: "tuple",
+		items,
+		rest: hasRest ? _paramsOrRest : null,
+		...normalizeParams(hasRest ? _params : _paramsOrRest)
+	});
+}
 var ZodEnum = /*@__PURE__*/ $constructor("ZodEnum", (inst, def) => {
 	$ZodEnum.init(inst, def);
 	ZodType.init(inst, def);
@@ -4993,4 +5176,4 @@ function superRefine(fn, params) {
 	return /* @__PURE__ */ _superRefine(fn, params);
 }
 //#endregion
-export { number as a, union as c, literal as i, any as n, object as o, array as r, string as s, _enum as t };
+export { number as a, tuple as c, literal as i, union as l, any as n, object as o, array as r, string as s, _enum as t };

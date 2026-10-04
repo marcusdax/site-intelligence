@@ -1,8 +1,8 @@
 import { t as createServerFn } from "./ssr.mjs";
 import { t as createServerRpc } from "./createServerRpc-A6pJPYTF.mjs";
 import { a as haversineMeters, o as id } from "./utils-BOIfZi7B.mjs";
-import { a as number, s as string } from "../_libs/zod.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/geo-BiuCPRG_.js
+import { a as number, c as tuple, r as array, s as string } from "../_libs/zod.mjs";
+//#region node_modules/.nitro/vite/services/ssr/assets/geo-Bujvx6AJ.js
 var UA = "PropertyInsight/1.0 (ODASI; property-intelligence; contact@odasi.local)";
 var lastNominatim = 0;
 async function nominatimGate() {
@@ -230,14 +230,16 @@ var scanGeofence_createServerFn_handler = createServerRpc({
 var scanGeofence = createServerFn({ method: "POST" }).validator((input) => ({
 	lat: number().parse(input.lat),
 	lng: number().parse(input.lng),
-	radiusM: number().min(120).max(3200).parse(input.radiusM)
+	radiusM: number().min(120).max(3200).parse(input.radiusM),
+	polygon: input.polygon ? array(tuple([number(), number()])).min(3).max(24).parse(input.polygon) : void 0
 })).handler(scanGeofence_createServerFn_handler, async ({ data }) => {
-	const q = `[out:json][timeout:20];
+	const spatial = data.polygon ? `(poly:"${data.polygon.map(([lat, lng]) => `${lat} ${lng}`).join(" ")}")` : `(around:${data.radiusM},${data.lat},${data.lng})`;
+	const q = `[out:json][timeout:25];
 (
-  way["building"]["addr:housenumber"](around:${data.radiusM},${data.lat},${data.lng});
-  node["addr:housenumber"]["addr:street"](around:${data.radiusM},${data.lat},${data.lng});
+  way["building"]["addr:housenumber"]${spatial};
+  node["addr:housenumber"]["addr:street"]${spatial};
 );
-out center 48;`;
+out center 64;`;
 	try {
 		const els = await overpass(q);
 		const seen = /* @__PURE__ */ new Set();
@@ -261,7 +263,7 @@ out center 48;`;
 				lng,
 				source: "geofence"
 			});
-			if (hits.length >= 36) break;
+			if (hits.length >= 48) break;
 		}
 		return {
 			ok: true,

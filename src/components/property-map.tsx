@@ -92,6 +92,11 @@ export function PropertyMap({ onMapClick, onZoneSelect }: Props) {
       );
 
       map.on("click", (e: { latlng: { lat: number; lng: number } }) => {
+        const st = usePropertyStore.getState();
+        if (st.geofenceMode && st.geofenceShape === "polygon") {
+          st.addGeofenceVertex([e.latlng.lat, e.latlng.lng]);
+          return;
+        }
         onClickRef.current(e.latlng.lat, e.latlng.lng);
       });
 

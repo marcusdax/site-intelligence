@@ -1,0 +1,38 @@
+{
+  "url": "http://127.0.0.1:8081/",
+  "viewports": {
+    "desktop": {
+      "width": 1280,
+      "height": 800,
+      "status": 200,
+      "title": "PropertyInsight",
+      "hasCanvas": false,
+      "bodyTextLen": 641,
+      "bodyTextHash": "e3c44f9756512e9fd0be571a8f98254b038f09d8ab47abc4448e70223067f404",
+      "bodyTextPrefix": "Command SCOUT RADAR GLOBE JOBS VISION SOURCES PropertyInsight VI",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-built.png"
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "status": 200,
+      "title": "PropertyInsight",
+      "hasCanvas": false,
+      "bodyTextLen": 631,
+      "bodyTextHash": "97ec187a5d2b152cc1adf550073beee17a98ca41f3f9f53480bf29f83f8657ec",
+      "bodyTextPrefix": "SCOUT RADAR GLOBE JOBS VISION SOURCES PropertyInsight VIVELLA · ",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-built-mobile.png"
+    }
+  },
+  "brandWarnings": [],
+  "authWarnings": [],
+  "verdictFile": "/workspace/screenshots/app-builder-built.json",
+  "divergesFromBaseline": false,
+  "baselineReasons": []
+}

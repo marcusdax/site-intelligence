@@ -1,6 +1,28 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
+function stringifyFields(v: unknown): Record<string, string> {
+  if (!v || typeof v !== "object" || Array.isArray(v)) return {};
+  const out: Record<string, string> = {};
+  for (const [k, val] of Object.entries(v as Record<string, unknown>)) {
+    if (val == null) continue;
+    out[k] = typeof val === "string" ? val : JSON.stringify(val);
+  }
+  return out;
+}
+
+function asDamage(v: unknown): { feature: string; severity: string; note: string }[] {
+  if (!Array.isArray(v)) return [];
+  return v.slice(0, 12).map((row) => {
+    const r = (row ?? {}) as Record<string, unknown>;
+    return {
+      feature: String(r.feature ?? ""),
+      severity: String(r.severity ?? ""),
+      note: String(r.note ?? ""),
+    };
+  });
+}
+
 export const readDocument = createServerFn({ method: "POST" })
   .validator((input: { imageDataUrl: string; hint?: string }) => ({
     imageDataUrl: z.string().min(32).max(6_500_000).parse(input.imageDataUrl),
@@ -35,18 +57,21 @@ Return JSON only.`;
           {
             role: "user",
             content: [
-              { type: "text", text: `${userText}
+              {
+                type: "text",
+                text: `${userText}
 JSON keys:
 kind: "document" | "facade" | "other"
 docType: string
 address: string | null
 summary: string
 text: string (raw OCR, truncated)
-fields: object of labeled values
+fields: object of labeled string values
 damage: array of { feature, severity (low|moderate|high|critical), note }
 conditionScore: number 0-100
 suggestedPlay: string
-` },
+`,
+              },
               { type: "image_url", image_url: { url: data.imageDataUrl } },
             ],
           },
@@ -69,8 +94,8 @@ suggestedPlay: string
         address: parsed.address ? String(parsed.address) : null,
         summary: String(parsed.summary ?? ""),
         text: String(parsed.text ?? "").slice(0, 4000),
-        fields: (parsed.fields ?? {}) as Record<string, unknown>,
-        damage: Array.isArray(parsed.damage) ? parsed.damage : [],
+        fields: stringifyFields(parsed.fields),
+        damage: asDamage(parsed.damage),
         conditionScore: typeof parsed.conditionScore === "number" ? parsed.conditionScore : null,
         suggestedPlay: String(parsed.suggestedPlay ?? ""),
       };
@@ -79,12 +104,12 @@ suggestedPlay: string
         ok: true as const,
         kind: "other",
         docType: "unparsed",
-        address: null,
+        address: null as string | null,
         summary: raw.slice(0, 400),
         text: raw.slice(0, 4000),
-        fields: {},
-        damage: [],
-        conditionScore: null,
+        fields: {} as Record<string, string>,
+        damage: [] as { feature: string; severity: string; note: string }[],
+        conditionScore: null as number | null,
         suggestedPlay: "",
       };
     }
